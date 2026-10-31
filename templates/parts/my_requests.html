@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}My Spare Parts Requests - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
+          <i class="fa-solid fa-wrench me-1"></i> Technician Workshop
+        </span>
+        <h3 class="fw-bold text-dark m-0">My Spare Parts Requisitions</h3>
+      </div>
+      <p class="text-secondary small m-0">Track real-time status of component requests dispatched to the Spare Parts Department</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('services_list') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-wrench me-1"></i> Work Orders
+      </a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-light border rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-chart-pie me-1"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Notification Banner if parts are ready -->
+  {% set available_count = 0 %}
+  {% for r in my_requests %}
+    {% if r.status == 'Part Available' %}
+      {% set available_count = available_count + 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% if available_count > 0 %}
+  <div class="alert alert-success border-0 shadow-sm rounded-4 p-4 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <div class="brand-icon-box bg-success text-white" style="width: 48px; height: 48px; font-size: 1.4rem;">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <h5 class="fw-bold text-dark m-0">{{ available_count }} Spare Part{% if available_count != 1 %}s{% endif %} Ready for Collection!</h5>
+        <p class="text-secondary small mb-0">The Spare Parts Department has marked components as available. Please collect them and resume work.</p>
+      </div>
+    </div>
+    <span class="badge bg-success text-white rounded-pill px-3 py-2 fs-6">
+      <i class="fa-solid fa-box-open me-1"></i> Parts Ready at Counter
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Technician Filter & Search Bar -->
+  <div class="card fs-card mb-4 shadow-sm" data-aos="fade-up">
+    <div class="card-body p-3">
+      <form method="GET" action="{{ url_for('technician_parts_requests') }}" class="row g-2 align-items-center">
+        <div class="col-md-5">
+          <div class="input-group">
+            <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" name="search" class="form-control" placeholder="Search part name, SKU, WO #, or vehicle plate..." value="{{ search }}">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <select name="status" class="form-select">
+            <option value="All" {% if not status or status == 'All' %}selected{% endif %}>All Statuses</option>
+            <option value="Part Available" {% if status == 'Part Available' %}selected{% endif %}>Part Available (Ready for Collection)</option>
+            <option value="Waiting for Parts" {% if status == 'Waiting for Parts' %}selected{% endif %}>Waiting for Parts / Pending</option>
+            <option value="Not Available" {% if status == 'Not Available' %}selected{% endif %}>Not Available</option>
+            <option value="Received by Technician" {% if status == 'Received by Technician' %}selected{% endif %}>Received</option>
+            <option value="Completed" {% if status == 'Completed' %}selected{% endif %}>Completed</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100 shadow-sm"><i class="fa-solid fa-filter me-1"></i> Filter</button>
+          <a href="{{ url_for('technician_parts_requests') }}" class="btn btn-light border px-3" title="Clear Filters"><i class="fa-solid fa-rotate-left"></i></a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Requests Table Card -->
+  <div class="card fs-card overflow-hidden shadow-sm" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Requisition Registry</h5>
+        <small class="text-secondary">Components requested for your assigned fleet repair orders</small>
+      </div>
+      <span class="text-secondary small">Total: {{ my_requests|length }} request(s)</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fs-table table-align-middle">
+        <thead>
+          <tr>
+            <th>Req #</th>
+            <th>Requested Date</th>
+            <th>Work Order #</th>
+            <th>Vehicle</th>
+            <th>Requested Spare Part</th>
+            <th class="text-center">Qty Req</th>
+            <th class="text-center">Qty Ready</th>
+            <th>Department Remarks</th>
+            <th>Current Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in my_requests %}
+          <tr class="{% if req.status == 'Part Available' %}table-success bg-opacity-25{% endif %}">
+            <!-- Req ID -->
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">#REQ-{{ req.id }}</span>
+            </td>
+
+            <!-- Date -->
+            <td>
+              <span class="text-dark small fw-medium">{{ req.requested_at | format_date }}</span>
+            </td>
+
+            <!-- Work Order -->
+            <td>
+              <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="fw-bold text-primary font-monospace text-decoration-none">
+                {{ req.invoice_number }}
+              </a>
+              <small class="text-muted d-block">{{ req.customer_name }}</small>
+            </td>
+
+            <!-- Vehicle -->
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">{{ req.plate_number }}</span>
+              <small class="text-secondary d-block">{{ req.make }} {{ req.model }}</small>
+            </td>
+
+            <!-- Requested Part -->
+            <td>
+              <strong class="text-dark d-block">{{ req.part_name }}</strong>
+              {% if req.part_number %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border font-monospace" style="font-size: 0.7rem;">
+                  {{ req.part_number }}
+                </span>
+              {% endif %}
+              {% if req.technician_notes %}
+                <small class="text-muted d-block fst-italic">My Note: {{ req.technician_notes }}</small>
+              {% endif %}
+            </td>
+
+            <!-- Qty Req -->
+            <td class="text-center">
+              <span class="badge bg-primary bg-opacity-10 text-primary fs-6 px-2 py-1 rounded-pill">
+                {{ req.quantity_requested }}
+              </span>
+            </td>
+
+            <!-- Qty Ready -->
+            <td class="text-center">
+              <span class="badge {% if req.quantity_available >= req.quantity_requested %}bg-success text-white{% elif req.quantity_available > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %} fs-6 px-2 py-1 rounded-pill">
+                {{ req.quantity_available }}
+              </span>
+            </td>
+
+            <!-- Dept Remarks -->
+            <td>
+              {% if req.parts_dept_notes %}
+                <span class="small text-dark fw-medium">
+                  <i class="fa-solid fa-comment-dots text-primary me-1"></i>{{ req.parts_dept_notes }}
+                </span>
+              {% else %}
+                <span class="small text-muted">Awaiting warehouse review</span>
+              {% endif %}
+            </td>
+
+            <!-- Status -->
+            <td>
+              {% if req.status == 'Part Available' %}
+                <span class="badge bg-success text-white rounded-pill px-3 py-1 shadow-xs animate__animated animate__pulse animate__infinite">
+                  <i class="fa-solid fa-circle-check me-1"></i> Part Available!
+                </span>
+              {% elif req.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
+                <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-clock me-1"></i> {{ req.status }}
+                </span>
+              {% elif req.status == 'Not Available' %}
+                <span class="badge bg-danger bg-opacity-15 text-danger rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-circle-xmark me-1"></i> Not Available
+                </span>
+              {% elif req.status == 'Received by Technician' %}
+                <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-hand-holding me-1"></i> Received
+                </span>
+              {% elif req.status == 'Repair In Progress' %}
+                <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-wrench me-1"></i> Repair In Progress
+                </span>
+              {% elif req.status == 'Completed' %}
+                <span class="badge bg-light text-success border border-success-subtle rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-check-double me-1"></i> Completed
+                </span>
+              {% else %}
+                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">
+                  {{ req.status }}
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Action -->
+            <td class="text-end">
+              {% if req.status == 'Part Available' %}
+                <form action="{{ url_for('parts_request_mark_received', request_id=req.id) }}" method="POST" class="d-inline m-0">
+                  <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold">
+                    <i class="fa-solid fa-hand-holding me-1"></i> Mark Received & Resume
+                  </button>
+                </form>
+              {% elif req.status == 'Received by Technician' %}
+                <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-xs">
+                  <i class="fa-solid fa-wrench me-1"></i> Open Order
+                </a>
+              {% else %}
+                <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="btn btn-sm btn-light border rounded-pill px-3">
+                  <i class="fa-solid fa-eye me-1"></i> Order Details
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center py-5 text-secondary">
+              <i class="fa-solid fa-clipboard-check fa-3x text-muted opacity-50 mb-3 d-block"></i>
+              <h5 class="fw-bold text-dark">No Parts Requests Submitted</h5>
+              <p class="text-secondary small mb-3">You have not submitted any pending spare parts requests for your assigned work orders.</p>
+              <a href="{{ url_for('services_list') }}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm">
+                View Work Orders
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+

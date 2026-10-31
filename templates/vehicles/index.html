@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet Vehicles - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark m-0">Fleet & Customer Vehicles</h3>
+      <p class="text-secondary small m-0">Track assets, mileage readings, and individual maintenance logs</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('vehicle_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-plus me-1"></i> Register New Vehicle
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="card fs-card mb-4 p-3">
+    <form action="{{ url_for('vehicles_list') }}" method="GET" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" name="search" class="form-control border-start-0" placeholder="Search by plate, VIN, make, model, or customer..." value="{{ search }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="">All Operational Statuses</option>
+          <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active Assets</option>
+          <option value="In Service" {% if status_filter == 'In Service' %}selected{% endif %}>In Service Bay</option>
+          <option value="Maintenance Due" {% if status_filter == 'Maintenance Due' %}selected{% endif %}>Maintenance Due</option>
+          <option value="Out of Service" {% if status_filter == 'Out of Service' %}selected{% endif %}>Out of Service</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="type" class="form-select" onchange="this.form.submit()">
+          <option value="">All Vehicle Categories</option>
+          <option value="Fleet Van" {% if type_filter == 'Fleet Van' %}selected{% endif %}>Fleet Van</option>
+          <option value="Sedan" {% if type_filter == 'Sedan' %}selected{% endif %}>Sedan</option>
+          <option value="SUV" {% if type_filter == 'SUV' %}selected{% endif %}>SUV</option>
+          <option value="Pickup Truck" {% if type_filter == 'Pickup Truck' %}selected{% endif %}>Pickup Truck</option>
+          <option value="Box Truck" {% if type_filter == 'Box Truck' %}selected{% endif %}>Box Truck</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <a href="{{ url_for('vehicles_list') }}" class="btn btn-outline-secondary w-100" title="Reset Filters">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Vehicle Cards Grid -->
+  <div class="row g-3">
+    {% for v in vehicles %}
+    <div class="col-md-6 col-xl-3" data-aos="fade-up">
+      <div class="card fs-card fs-card-hover h-100 overflow-hidden">
+        <!-- Vehicle Image Thumbnail -->
+        <div class="position-relative" style="height: 160px; background-color: #0f172a;">
+          <img src="{{ v.image_url or 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=600&q=80' }}"
+               alt="{{ v.make }} {{ v.model }}" 
+               class="w-100 h-100 object-fit-cover"
+               onerror="this.src='https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=600&q=80'">
+          
+          <!-- Status Badge Overlay -->
+          <div class="position-absolute top-0 end-0 m-2">
+            {% if v.status == 'Active' %}
+              <span class="fs-badge badge-active shadow-sm"><span class="badge-dot"></span>Active</span>
+            {% elif v.status == 'In Service' %}
+              <span class="fs-badge badge-inservice shadow-sm"><span class="badge-dot"></span>In Service</span>
+            {% elif v.status == 'Maintenance Due' %}
+              <span class="fs-badge badge-overdue shadow-sm"><span class="badge-dot"></span>Due Service</span>
+            {% else %}
+              <span class="fs-badge badge-priority-low shadow-sm"><span class="badge-dot"></span>{{ v.status }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Type Badge Overlay -->
+          <div class="position-absolute bottom-0 start-0 m-2">
+            <span class="badge bg-black bg-opacity-75 text-white backdrop-blur px-2 py-1 small rounded-2">
+              <i class="fa-solid fa-tag me-1 text-info"></i> {{ v.vehicle_type }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body p-3 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <h5 class="fw-bold text-dark m-0 text-truncate">{{ v.year }} {{ v.make }} {{ v.model }}</h5>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge bg-light text-primary border fw-bold px-2 py-1" style="letter-spacing: 0.05em;">
+                <i class="fa-solid fa-id-card me-1"></i>{{ v.plate_number }}
+              </span>
+              <span class="small text-secondary text-truncate" title="VIN: {{ v.vin }}">
+                VIN: ...{{ v.vin[-8:] }}
+              </span>
+            </div>
+
+            <!-- Odometer & Fuel -->
+            <div class="bg-light p-2 rounded-2 mb-3 d-flex justify-content-between align-items-center small">
+              <div>
+                <span class="text-secondary d-block" style="font-size: 0.72rem;">ODOMETER</span>
+                <strong class="text-dark">{{ v.current_odometer | format_km }}</strong>
+              </div>
+              <div class="text-end">
+                <span class="text-secondary d-block" style="font-size: 0.72rem;">POWERTRAIN</span>
+                <span class="badge bg-white text-secondary border">{{ v.fuel_type }}</span>
+              </div>
+            </div>
+
+            <!-- Customer Details -->
+            <div class="small mb-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">REGISTERED OWNER / FLEET</span>
+              <div class="fw-semibold text-truncate text-dark">
+                <i class="fa-regular fa-user text-primary me-1"></i>
+                {% if v.company_name %}
+                  {{ v.company_name }} <span class="text-muted fw-normal">({{ v.customer_name }})</span>
+                {% else %}
+                  {{ v.customer_name }}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Footers -->
+          <div class="border-top pt-3 d-flex gap-2">
+            <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-2">
+              <i class="fa-solid fa-gauge-high me-1"></i> Overview
+            </a>
+            <a href="{{ url_for('service_create', vehicle_id=v.id) }}" class="btn btn-fs-primary btn-sm rounded-2" title="New Work Order">
+              <i class="fa-solid fa-wrench"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12 py-5 text-center">
+      <div class="p-5 bg-white rounded-4 border">
+        <i class="fa-solid fa-car-tunnel fs-1 text-secondary mb-3"></i>
+        <h4>No vehicles matched your search query</h4>
+        <p class="text-secondary">Try adjusting filters or register a new customer vehicle.</p>
+        <a href="{{ url_for('vehicle_create') }}" class="btn btn-fs-primary rounded-pill px-4">
+          Register New Vehicle
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

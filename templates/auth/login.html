@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - {{ app_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="container-fluid p-0 d-flex flex-grow-1">
+  <div class="row g-0 flex-grow-1">
+    <!-- Left Hero Brand Column -->
+    <div class="col-lg-7 d-none d-lg-flex flex-column justify-content-between p-5 text-white" 
+         style="background: linear-gradient(135deg, #0b0f19 0%, #1e1b4b 60%, #0f172a 100%);">
+      <div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="brand-icon-box">
+            <i class="fa-solid fa-truck-fast"></i>
+          </div>
+          <div>
+            <h3 class="fw-bold m-0 tracking-tight">{{ app_name }}</h3>
+            <span class="text-info text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.1em;">Fleet & Service Hub</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="my-auto py-5" data-aos="fade-right">
+        <span class="badge bg-primary bg-opacity-25 text-info px-3 py-2 rounded-pill mb-3">Enterprise SaaS Platform</span>
+        <h1 class="display-5 fw-extrabold mb-3">Precision Vehicle Lifecycle & Maintenance Tracking</h1>
+        <p class="lead text-light text-opacity-75 mb-4" style="max-width: 580px;">
+          Empower service centers and fleet operators with intelligent work orders, automated preventive maintenance countdowns, and real-time customer reminder dispatch.
+        </p>
+
+        <!-- Feature Points -->
+        <div class="row g-3" style="max-width: 600px;">
+          <div class="col-sm-6">
+            <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-5">
+              <i class="fa-solid fa-shield-halved text-success"></i>
+              <span class="small">OEM Interval Automation</span>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-5">
+              <i class="fa-solid fa-bell text-warning"></i>
+              <span class="small">Automated Due Reminders</span>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-5">
+              <i class="fa-solid fa-file-invoice-dollar text-info"></i>
+              <span class="small">Itemized Invoicing & Work Orders</span>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-white bg-opacity-5">
+              <i class="fa-solid fa-database text-primary"></i>
+              <span class="small">MySQL (XAMPP) Powered</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="small text-secondary">
+        &copy; {{ current_year }} {{ company_name }}. Professional Automotive Operations Suite.
+      </div>
+    </div>
+
+    <!-- Right Login Form Column -->
+    <div class="col-lg-5 d-flex align-items-center justify-content-center p-4 p-md-5 bg-white">
+      <div class="w-100" style="max-width: 420px;" data-aos="fade-up">
+        
+        <div class="text-center mb-4">
+          <div class="d-inline-flex brand-icon-box mb-3 d-lg-none">
+            <i class="fa-solid fa-truck-fast"></i>
+          </div>
+          <h2 class="fw-bold text-dark">Welcome back</h2>
+          <p class="text-secondary small">Enter your credentials to access the service portal</p>
+        </div>
+
+        <!-- Quick Demo Credentials Box -->
+        <div class="p-3 mb-4 rounded-3 bg-light border border-secondary border-opacity-10">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small fw-bold text-secondary text-uppercase" style="font-size: 0.72rem;">Demo Access Quick-Fill:</span>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1" id="fill-admin">
+              <i class="fa-solid fa-user-shield me-1"></i> Admin
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1" id="fill-tech">
+              <i class="fa-solid fa-wrench me-1"></i> Technician
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning flex-grow-1" id="fill-parts">
+              <i class="fa-solid fa-boxes-stacked me-1"></i> Spare Parts
+            </button>
+          </div>
+        </div>
+
+        <form action="{{ url_for('login') }}" method="POST">
+          <div class="mb-3">
+            <label class="form-label" for="login-email">Work Email Address</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 text-secondary"><i class="fa-regular fa-envelope"></i></span>
+              <input type="email" id="login-email" name="email" class="form-control border-start-0" placeholder="name@company.com" required autofocus>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label" for="login-password">Password</label>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 text-secondary"><i class="fa-solid fa-lock"></i></span>
+              <input type="password" id="login-password" name="password" class="form-control border-start-0" placeholder="••••••••" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-fs-primary w-100 py-2 mb-3">
+            <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In to FleetSync
+          </button>
+        </form>
+
+        <div class="text-center mt-3">
+          <span class="text-secondary small">Need a new staff account?</span>
+          <a href="{{ url_for('register') }}" class="small fw-semibold text-primary text-decoration-none ms-1">Register staff</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('fill-admin').addEventListener('click', function() {
+    document.getElementById('login-email').value = 'admin@fleetsync.io';
+    document.getElementById('login-password').value = 'Admin@123';
+  });
+  document.getElementById('fill-tech').addEventListener('click', function() {
+    document.getElementById('login-email').value = 'tech@fleetsync.io';
+    document.getElementById('login-password').value = 'Tech@123';
+  });
+  document.getElementById('fill-parts').addEventListener('click', function() {
+    document.getElementById('login-email').value = 'parts@fleetsync.io';
+    document.getElementById('login-password').value = 'Parts@123';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}{% if service %}Edit Work Order {{ service.invoice_number }}{% else %}New Work Order{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('services_list') }}" class="text-decoration-none">Work Orders</a></li>
+        <li class="breadcrumb-item active fw-bold">{% if service %}Edit Order {{ service.invoice_number }}{% else %}Create New Work Order{% endif %}</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-11">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h4 class="fw-bold text-dark m-0">{% if service %}Edit Work Order & Billing{% else %}New Vehicle Work Order & Job Card{% endif %}</h4>
+            <small class="text-secondary">Track repair details, assign technicians, and calculate itemized parts & labor</small>
+          </div>
+          <span class="brand-icon-box" style="width: 44px; height: 44px;">
+            <i class="fa-solid fa-wrench"></i>
+          </span>
+        </div>
+
+        <form action="" method="POST" id="work-order-form">
+          <!-- Step 1: Vehicle & Technician Assignment -->
+          <div class="mb-4">
+            <h6 class="fw-bold text-primary text-uppercase mb-3" style="font-size: 0.78rem; letter-spacing: 0.05em;">
+              <i class="fa-solid fa-car me-1"></i> Asset & Staff Assignment
+            </h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="work-order-vehicle-select">Vehicle Asset <span class="text-danger">*</span></label>
+                <select id="work-order-vehicle-select" name="vehicle_id" class="form-select" required {% if service %}disabled{% endif %}>
+                  <option value="" disabled {% if not service and not preset_vehicle_id %}selected{% endif %}>Select Vehicle...</option>
+                  {% for v in vehicles %}
+                    <option value="{{ v.id }}" 
+                      {% if service and service.vehicle_id == v.id %}selected
+                      {% elif preset_vehicle_id and preset_vehicle_id == v.id %}selected{% endif %}>
+                      {{ v.plate_number }} &bull; {{ v.make }} {{ v.model }} (Odometer: {{ v.current_odometer | format_km }})
+                    </option>
+                  {% endfor %}
+                </select>
+                {% if service %}
+                  <small class="text-muted">Vehicle assignment cannot be modified.</small>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="wo-tech">Assigned Technician</label>
+                <select id="wo-tech" name="user_id" class="form-select">
+                  <option value="">Unassigned</option>
+                  {% for t in technicians %}
+                    <option value="{{ t.id }}" {% if service and service.user_id == t.id %}selected{% endif %}>
+                      {{ t.name }} ({{ t.role }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="wo-date">Service Date <span class="text-danger">*</span></label>
+                <input type="date" id="wo-date" name="service_date" class="form-control" value="{{ service.service_date if service else now.strftime('%Y-%m-%d') }}" required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="work-order-odometer-input">Current Odometer (km) <span class="text-danger">*</span></label>
+                <input type="number" id="work-order-odometer-input" name="odometer" class="form-control" value="{{ service.odometer if service else 0 }}" min="0" required>
+                <small id="odometer-last-reading-hint" class="text-secondary" style="font-size: 0.75rem;">Recorded vehicle mileage.</small>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="wo-type">Service Category</label>
+                <select id="wo-type" name="service_type" class="form-select">
+                  {% for st in ['Preventive Maintenance', 'Brake System Overhaul', 'Tire Replacement & Balancing', 'Suspension & Steering', 'Engine Diagnostic & Tune-up', 'Transmission Service', 'Electrical & Battery', 'HVAC Air Conditioning', 'Commercial DOT Inspection', 'Emergency Repair'] %}
+                    <option value="{{ st }}" {% if service and service.service_type == st %}selected{% endif %}>{{ st }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="wo-status">Job Status</label>
+                <select id="wo-status" name="status" class="form-select">
+                  {% for stat in ['In Progress', 'Waiting for Parts', 'Completed', 'Pending', 'Cancelled'] %}
+                    <option value="{{ stat }}" {% if service and service.status == stat %}selected{% endif %}>{{ stat }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="wo-payment">Payment Status</label>
+                <select id="wo-payment" name="payment_status" class="form-select">
+                  <option value="Unpaid" {% if service and service.payment_status == 'Unpaid' %}selected{% endif %}>Unpaid / Awaiting Settlement</option>
+                  <option value="Partially Paid" {% if service and service.payment_status == 'Partially Paid' %}selected{% endif %}>Partially Paid</option>
+                  <option value="Paid" {% if service and service.payment_status == 'Paid' %}selected{% endif %}>Paid In Full</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Interactive Line Items Calculator -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="fw-bold text-primary text-uppercase m-0" style="font-size: 0.78rem; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-list-check me-1"></i> Itemized Parts, Materials & Labor Hours
+              </h6>
+              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="btn-add-item">
+                <i class="fa-solid fa-plus me-1"></i> Add Line Item
+              </button>
+            </div>
+
+            <div class="table-responsive border rounded-3 overflow-hidden mb-3">
+              <table class="table table-sm align-middle mb-0" id="line-items-table">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 170px;">Type</th>
+                    <th>Item Description / Part Code</th>
+                    <th style="width: 120px;" class="text-end">Qty / Hours</th>
+                    <th style="width: 150px;" class="text-end">Unit Price</th>
+                    <th style="width: 130px;" class="text-end">Total</th>
+                    <th style="width: 50px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="line-items-container">
+                  {% if items %}
+                    {% for item in items %}
+                    <tr class="line-item-row align-middle">
+                      <td>
+                        <select name="item_type[]" class="form-select form-select-sm item-type">
+                          <option value="Part" {% if item.item_type == 'Part' %}selected{% endif %}>Part / Material</option>
+                          <option value="Labor" {% if item.item_type == 'Labor' %}selected{% endif %}>Labor</option>
+                          <option value="Inspection" {% if item.item_type == 'Inspection' %}selected{% endif %}>Inspection</option>
+                          <option value="Fee" {% if item.item_type == 'Fee' %}selected{% endif %}>Fee / Misc</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="text" name="item_name[]" class="form-control form-control-sm item-name" value="{{ item.item_name }}" required>
+                      </td>
+                      <td style="width: 120px;">
+                        <input type="number" step="0.25" min="0" name="item_quantity[]" class="form-control form-control-sm item-quantity text-end" value="{{ item.quantity }}">
+                      </td>
+                      <td style="width: 150px;">
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" min="0" name="item_price[]" class="form-control item-price text-end" value="{{ item.unit_price }}">
+                        </div>
+                      </td>
+                      <td class="text-end fw-semibold item-total-display" style="width: 130px;">
+                        {{ item.total_price | currency }}
+                      </td>
+                      <td class="text-center" style="width: 50px;">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remove-item">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <!-- Initial Default Blank Rows -->
+                    <tr class="line-item-row align-middle">
+                      <td>
+                        <select name="item_type[]" class="form-select form-select-sm item-type">
+                          <option value="Part" selected>Part / Material</option>
+                          <option value="Labor">Labor</option>
+                          <option value="Inspection">Inspection</option>
+                          <option value="Fee">Fee / Misc</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="text" name="item_name[]" class="form-control form-control-sm item-name" placeholder="e.g. Synthetic Motor Oil 5W-30 (Liters)" value="Full Synthetic 5W-30 Motor Oil (4L)" required>
+                      </td>
+                      <td style="width: 120px;">
+                        <input type="number" step="0.25" min="0" name="item_quantity[]" class="form-control form-control-sm item-quantity text-end" value="1.00">
+                      </td>
+                      <td style="width: 150px;">
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" min="0" name="item_price[]" class="form-control item-price text-end" value="2800.00">
+                        </div>
+                      </td>
+                      <td class="text-end fw-semibold item-total-display" style="width: 130px;">
+                        ₹2,800.00
+                      </td>
+                      <td class="text-center" style="width: 50px;">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remove-item">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr class="line-item-row align-middle">
+                      <td>
+                        <select name="item_type[]" class="form-select form-select-sm item-type">
+                          <option value="Part">Part / Material</option>
+                          <option value="Labor" selected>Labor</option>
+                          <option value="Inspection">Inspection</option>
+                          <option value="Fee">Fee / Misc</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="text" name="item_name[]" class="form-control form-control-sm item-name" placeholder="e.g. Multi-point inspection & diagnostic" value="Comprehensive Multi-Point Inspection Labor" required>
+                      </td>
+                      <td style="width: 120px;">
+                        <input type="number" step="0.25" min="0" name="item_quantity[]" class="form-control form-control-sm item-quantity text-end" value="1.00">
+                      </td>
+                      <td style="width: 150px;">
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" min="0" name="item_price[]" class="form-control item-price text-end" value="1500.00">
+                        </div>
+                      </td>
+                      <td class="text-end fw-semibold item-total-display" style="width: 130px;">
+                        ₹1,500.00
+                      </td>
+                      <td class="text-center" style="width: 50px;">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remove-item">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Dynamic Live Calculations Panel -->
+            <div class="row justify-content-end">
+              <div class="col-md-5">
+                <div class="card bg-light border p-3">
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-secondary">Parts & Materials:</span>
+                    <strong class="text-dark" id="calc-parts-cost">₹0.00</strong>
+                  </div>
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-secondary">Labor Billed:</span>
+                    <strong class="text-dark" id="calc-labor-cost">₹0.00</strong>
+                  </div>
+                  <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-secondary">Estimated Tax (8%):</span>
+                    <strong class="text-dark" id="calc-tax-amount">₹0.00</strong>
+                  </div>
+                  <div class="d-flex justify-content-between border-top pt-2">
+                    <span class="fw-bold fs-6">Estimated Invoice Total:</span>
+                    <span class="fw-bold fs-5 text-primary" id="calc-grand-total">₹0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Notes & Concerns -->
+          <div class="mb-4">
+            <h6 class="fw-bold text-primary text-uppercase mb-3" style="font-size: 0.78rem; letter-spacing: 0.05em;">
+              <i class="fa-regular fa-comment-dots me-1"></i> Work Order Notes & Technical Diagnosis
+            </h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="wo-desc">Customer Concern / Intake Description</label>
+                <textarea id="wo-desc" name="description" class="form-control" rows="3" placeholder="Customer reported brake squeak or requested standard routine 40,000 km service package...">{{ service.description if service else '' }}</textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="wo-notes">Technician Diagnostic Findings</label>
+                <textarea id="wo-notes" name="technician_notes" class="form-control" rows="3" placeholder="Brake pad thickness at 3mm, rotor runout checked within 0.002 in, battery test passed 12.6V...">{{ service.technician_notes if service else '' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('services_list') }}" class="btn btn-light border px-4">Cancel</a>
+            <button type="submit" class="btn btn-fs-primary px-4">
+              <i class="fa-solid fa-check me-2"></i> {% if service %}Save Work Order{% else %}Issue Work Order{% endif %}
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

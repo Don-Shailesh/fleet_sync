@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{% if schedule %}Edit Schedule Rule{% else %}New Maintenance Schedule{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('schedules_list') }}" class="text-decoration-none">Maintenance Schedules</a></li>
+        <li class="breadcrumb-item active fw-bold">{% if schedule %}Edit Rule{% else %}Establish Service Schedule Rule{% endif %}</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h4 class="fw-bold text-dark m-0">{% if schedule %}Edit Schedule Interval{% else %}New Preventive Maintenance Interval{% endif %}</h4>
+            <small class="text-secondary">Set recurring odometer and calendar triggers for vehicle safety</small>
+          </div>
+          <span class="brand-icon-box" style="width: 44px; height: 44px;">
+            <i class="fa-solid fa-calendar-check"></i>
+          </span>
+        </div>
+
+        <form action="" method="POST">
+          <div class="row g-3 mb-4">
+            <div class="col-md-12">
+              <label class="form-label" for="sched-veh">Target Fleet Vehicle <span class="text-danger">*</span></label>
+              <select id="sched-veh" name="vehicle_id" class="form-select" {% if schedule %}disabled{% endif %} required>
+                <option value="" disabled {% if not schedule %}selected{% endif %}>Select Vehicle...</option>
+                {% for v in vehicles %}
+                  <option value="{{ v.id }}" {% if schedule and schedule.vehicle_id == v.id %}selected{% endif %}>
+                    {{ v.plate_number }} - {{ v.make }} {{ v.model }} (Odometer: {{ v.current_odometer | format_km }})
+                  </option>
+                {% endfor %}
+              </select>
+              {% if schedule %}
+                <small class="text-muted">Vehicle assignment cannot be changed after creation.</small>
+              {% endif %}
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label" for="sched-name">Service / Maintenance Name <span class="text-danger">*</span></label>
+              <input type="text" id="sched-name" name="service_name" class="form-control" placeholder="e.g. Engine Oil & Filter Change" value="{{ schedule.service_name if schedule else '' }}" required>
+              
+              <!-- Quick Presets -->
+              <div class="mt-2 d-flex flex-wrap gap-1">
+                <span class="small text-secondary me-2 align-self-center">Presets:</span>
+                <button type="button" class="btn btn-sm btn-light border py-0 px-2 small preset-sched" data-name="Engine Oil & Filter Change" data-km="8000" data-months="6">Oil & Filter</button>
+                <button type="button" class="btn btn-sm btn-light border py-0 px-2 small preset-sched" data-name="Front & Rear Ceramic Brake Pads" data-km="25000" data-months="12">Brake Pads</button>
+                <button type="button" class="btn btn-sm btn-light border py-0 px-2 small preset-sched" data-name="Transmission Fluid & Filter Flush" data-km="40000" data-months="24">Transmission Flush</button>
+                <button type="button" class="btn btn-sm btn-light border py-0 px-2 small preset-sched" data-name="Tire Rotation & Wheel Balancing" data-km="10000" data-months="6">Tire Rotation</button>
+                <button type="button" class="btn btn-sm btn-light border py-0 px-2 small preset-sched" data-name="Annual Comprehensive DOT Inspection" data-km="30000" data-months="12">DOT Inspection</button>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="sched-km">Mileage Interval (km)</label>
+              <div class="input-group">
+                <input type="number" id="sched-km" name="interval_km" class="form-control" step="1000" min="1000" value="{{ schedule.interval_km if schedule else 8000 }}" required>
+                <span class="input-group-text">km</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="sched-months">Time Interval (Months)</label>
+              <div class="input-group">
+                <input type="number" id="sched-months" name="interval_months" class="form-control" min="1" max="60" value="{{ schedule.interval_months if schedule else 6 }}" required>
+                <span class="input-group-text">Months</span>
+              </div>
+            </div>
+
+            {% if schedule %}
+            <div class="col-md-6">
+              <label class="form-label" for="sched-due-date">Next Due Date</label>
+              <input type="date" id="sched-due-date" name="next_due_date" class="form-control" value="{{ schedule.next_due_date }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="sched-due-odo">Next Due Odometer (km)</label>
+              <input type="number" id="sched-due-odo" name="next_due_odometer" class="form-control" value="{{ schedule.next_due_odometer }}" required>
+            </div>
+            {% endif %}
+
+            <div class="col-md-6">
+              <label class="form-label" for="sched-priority">Priority Level</label>
+              <select id="sched-priority" name="priority" class="form-select">
+                {% for p in ['Low', 'Medium', 'High', 'Critical'] %}
+                  <option value="{{ p }}" {% if schedule and schedule.priority == p %}selected{% elif not schedule and p == 'Medium' %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {% if schedule %}
+            <div class="col-md-6">
+              <label class="form-label" for="sched-status">Status</label>
+              <select id="sched-status" name="status" class="form-select">
+                {% for st in ['Upcoming', 'Due Soon', 'Overdue', 'Completed'] %}
+                  <option value="{{ st }}" {% if schedule and schedule.status == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+
+            <div class="col-12">
+              <label class="form-label" for="sched-desc">Description / Checklist Items</label>
+              <textarea id="sched-desc" name="description" class="form-control" rows="3" placeholder="Oil grades, OEM parts part numbers, inspection checklist points...">{{ schedule.description if schedule else '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('schedules_list') }}" class="btn btn-light border px-4">Cancel</a>
+            <button type="submit" class="btn btn-fs-primary px-4">
+              <i class="fa-solid fa-check me-2"></i> {% if schedule %}Save Interval{% else %}Create Schedule Rule{% endif %}
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.preset-sched').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.getElementById('sched-name').value = this.getAttribute('data-name');
+      document.getElementById('sched-km').value = this.getAttribute('data-km');
+      document.getElementById('sched-months').value = this.getAttribute('data-months');
+    });
+  });
+</script>
+{% endblock %}

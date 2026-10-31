@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Financial & Operations Analytics - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark m-0">Fleet & Financial Analytics</h3>
+      <p class="text-secondary small m-0">Revenue trends, parts vs labor billing, and technician productivity metrics</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-file-csv me-1"></i> Export Full Service CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- Monthly Revenue Trend Chart -->
+  <div class="card fs-card mb-4" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Service Revenue & Labor Billing Trajectory</h5>
+        <small class="text-secondary">Historical billing performance across monthly cycles</small>
+      </div>
+      <i class="fa-solid fa-chart-line text-secondary"></i>
+    </div>
+    <div class="card-body p-4" style="height: 320px;">
+      {% set months_list = [] %}
+      {% set rev_list = [] %}
+      {% set parts_list = [] %}
+      {% set labor_list = [] %}
+      {% for m in monthly_revenue %}
+        {% set _ = months_list.append(m.month_label) %}
+        {% set _ = rev_list.append(m.total_revenue | float) %}
+        {% set _ = parts_list.append(m.total_parts | float) %}
+        {% set _ = labor_list.append(m.total_labor | float) %}
+      {% endfor %}
+      <canvas id="reportMonthlyRevenueChart"
+              data-months='{{ months_list | tojson }}'
+              data-revenue='{{ rev_list | tojson }}'
+              data-parts='{{ parts_list | tojson }}'
+              data-labor='{{ labor_list | tojson }}'></canvas>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- Top Serviced Vehicles -->
+    <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100">
+      <div class="card fs-card h-100">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">High-Maintenance Fleet Assets</h5>
+          <small class="text-secondary">Vehicles with highest cumulative service expenditure</small>
+        </div>
+        <div class="table-responsive">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Client</th>
+                <th>Work Orders</th>
+                <th class="text-end">Total Billed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tv in top_vehicles %}
+              <tr>
+                <td>
+                  <strong class="text-primary font-monospace">{{ tv.plate_number }}</strong>
+                  <small class="text-secondary d-block">{{ tv.make }} {{ tv.model }}</small>
+                </td>
+                <td>{{ tv.customer_name }}</td>
+                <td><span class="badge bg-light text-dark border">{{ tv.service_count }} Jobs</span></td>
+                <td class="text-end fw-bold text-success">{{ tv.total_spent | currency }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center py-4 text-secondary">No completed service data available yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technician Productivity -->
+    <div class="col-lg-6" data-aos="fade-up" data-aos-delay="200">
+      <div class="card fs-card h-100">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Service Technician Performance</h5>
+          <small class="text-secondary">Completed work order volume and labor billing</small>
+        </div>
+        <div class="table-responsive">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Technician</th>
+                <th>Jobs Completed</th>
+                <th class="text-end">Labor Billed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tp in tech_performance %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="brand-icon-box" style="width: 32px; height: 32px; font-size: 0.85rem; background: #334155;">
+                      <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <strong class="text-dark">{{ tp.tech_name }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1">
+                    {{ tp.total_jobs }} Completed
+                  </span>
+                </td>
+                <td class="text-end fw-bold text-dark">
+                  {{ (tp.total_labor_billed or 0) | currency }}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3" class="text-center py-4 text-secondary">No technician jobs logged.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}Spare Parts Department Dashboard - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header & Actions -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 px-2 py-1 rounded-pill small">
+          <i class="fa-solid fa-boxes-stacked me-1"></i> Warehouse & Supply Chain
+        </span>
+        <h3 class="fw-bold text-dark m-0">Spare Parts Department Hub</h3>
+      </div>
+      <p class="text-secondary small m-0">Real-time inventory levels, technician component requests, and fulfillment pipeline</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('parts_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-plus me-1"></i> Add New Part
+      </a>
+      <a href="{{ url_for('parts_inventory') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-boxes-stacked me-1"></i> Full Inventory
+      </a>
+      <a href="{{ url_for('parts_requests') }}" class="btn btn-outline-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-clipboard-list me-1"></i> All Tech Requests
+        {% if pending_count > 0 %}
+          <span class="badge bg-danger rounded-pill ms-1">{{ pending_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Metric Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Total In Stock Units -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="50">
+      <div class="card fs-card stat-card h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Total Stock Units</span>
+            <h2 class="fw-bold text-dark mt-1 mb-0">{{ total_units }}</h2>
+            <div class="small text-muted mt-1">{{ total_parts }} Catalog Items</div>
+          </div>
+          <div class="stat-icon primary">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Valuation -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="100">
+      <div class="card fs-card stat-card h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Inventory Valuation</span>
+            <h2 class="fw-bold text-primary mt-1 mb-0">{{ total_inventory_value | currency }}</h2>
+            <div class="small text-muted mt-1">Available Warehouse Assets</div>
+          </div>
+          <div class="stat-icon info">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low & Out of Stock Warnings -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="150">
+      <div class="card fs-card stat-card h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Low Stock & Reorders</span>
+            <h2 class="fw-bold {% if low_stock_count > 0 %}text-warning{% else %}text-muted{% endif %} mt-1 mb-0">
+              {{ low_stock_count }}
+            </h2>
+            <div class="small {% if low_stock_count > 0 %}text-warning{% else %}text-muted{% endif %} mt-1">
+              {{ out_of_stock_count }} Out of Stock
+            </div>
+          </div>
+          <div class="stat-icon {% if low_stock_count > 0 %}warning{% else %}secondary{% endif %}">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Technician Requests -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="200">
+      <div class="card fs-card stat-card h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Pending Tech Requests</span>
+            <h2 class="fw-bold {% if pending_count > 0 %}text-danger{% else %}text-success{% endif %} mt-1 mb-0">
+              {{ pending_count }}
+            </h2>
+            <div class="small {% if pending_count > 0 %}text-danger{% else %}text-success{% endif %} mt-1">
+              {% if pending_count > 0 %}Requires Department Action{% else %}All Requests Fulfilled{% endif %}
+            </div>
+          </div>
+          <div class="stat-icon {% if pending_count > 0 %}danger{% else %}success{% endif %}">
+            <i class="fa-solid fa-wrench"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Technician Requests Section -->
+  <div class="card fs-card mb-4 shadow-sm" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Incoming Technician Spare Parts Requests</h5>
+        <small class="text-secondary">Work orders currently on "Waiting for Parts" or awaiting fulfillment</small>
+      </div>
+      <a href="{{ url_for('parts_requests') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+        View All Requests ({{ all_requests_count }}) &rarr;
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Req #</th>
+            <th>Work Order / Vehicle</th>
+            <th>Customer</th>
+            <th>Technician</th>
+            <th>Required Spare Part</th>
+            <th class="text-center">Qty Req</th>
+            <th class="text-center">Stock Level</th>
+            <th>Priority</th>
+            <th>Request Status</th>
+            <th class="text-end">Fulfillment Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in recent_requests %}
+          <tr>
+            <!-- Req ID -->
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">#REQ-{{ req.id }}</span>
+              <small class="text-muted d-block" style="font-size: 0.72rem;">{{ req.requested_at | format_date }}</small>
+            </td>
+
+            <!-- Work Order & Vehicle -->
+            <td>
+              <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="fw-bold text-primary font-monospace text-decoration-none">
+                {{ req.invoice_number }}
+              </a>
+              <div class="small text-secondary font-monospace">{{ req.plate_number }}</div>
+              <small class="text-muted">{{ req.make }} {{ req.model }}</small>
+            </td>
+
+            <!-- Customer -->
+            <td>
+              <div class="fw-semibold text-dark">{{ req.customer_name }}</div>
+              {% if req.company_name %}
+                <small class="text-secondary">{{ req.company_name }}</small>
+              {% endif %}
+            </td>
+
+            <!-- Technician -->
+            <td>
+              <div class="d-flex align-items-center gap-1">
+                <i class="fa-solid fa-user-gear text-secondary small"></i>
+                <span class="text-dark fw-medium small">{{ req.tech_name }}</span>
+              </div>
+            </td>
+
+            <!-- Required Part -->
+            <td>
+              <div class="fw-bold text-dark">{{ req.part_name }}</div>
+              {% if req.part_number %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border font-monospace" style="font-size: 0.72rem;">
+                  {{ req.part_number }}
+                </span>
+              {% endif %}
+              {% if req.technician_notes %}
+                <small class="text-muted d-block text-truncate" style="max-width: 220px;" title="{{ req.technician_notes }}">
+                  <i class="fa-regular fa-comment-dots me-1"></i>{{ req.technician_notes }}
+                </small>
+              {% endif %}
+            </td>
+
+            <!-- Quantity Requested -->
+            <td class="text-center">
+              <span class="badge bg-primary bg-opacity-10 text-primary fs-6 px-2 py-1 rounded-pill">
+                {{ req.quantity_requested }}
+              </span>
+            </td>
+
+            <!-- Stock Level in Warehouse -->
+            <td class="text-center">
+              {% if req.stock_qty is not none %}
+                {% if req.stock_qty >= req.quantity_requested %}
+                  <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">
+                    <i class="fa-solid fa-check me-1"></i> {{ req.stock_qty }} In Stock
+                  </span>
+                {% elif req.stock_qty > 0 %}
+                  <span class="badge bg-warning bg-opacity-15 text-warning-emphasis rounded-pill px-2">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> Only {{ req.stock_qty }}
+                  </span>
+                {% else %}
+                  <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">
+                    <i class="fa-solid fa-xmark me-1"></i> 0 in Stock
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-light text-muted border">Custom Part</span>
+              {% endif %}
+            </td>
+
+            <!-- Priority -->
+            <td>
+              {% if req.priority == 'Urgent' %}
+                <span class="badge bg-danger rounded-pill px-2"><i class="fa-solid fa-bolt me-1"></i>Urgent</span>
+              {% elif req.priority == 'Low' %}
+                <span class="badge bg-light text-muted border rounded-pill px-2">Low</span>
+              {% else %}
+                <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2">Standard</span>
+              {% endif %}
+            </td>
+
+            <!-- Status -->
+            <td>
+              {% if req.status == 'Part Available' %}
+                <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-circle-check me-1"></i> Part Available
+                </span>
+              {% elif req.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
+                <span class="badge bg-warning bg-opacity-25 text-warning-emphasis rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-clock me-1"></i> {{ req.status }}
+                </span>
+              {% elif req.status == 'Not Available' %}
+                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-ban me-1"></i> Not Available
+                </span>
+              {% elif req.status == 'Received by Technician' %}
+                <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-hand-holding me-1"></i> Received by Tech
+                </span>
+              {% else %}
+                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">
+                  {{ req.status }}
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Quick Action Buttons -->
+            <td class="text-end">
+              {% if req.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
+                <div class="d-inline-flex gap-1">
+                  <!-- 1-Click Approve Form -->
+                  <form action="{{ url_for('parts_request_approve', request_id=req.id) }}" method="POST" class="d-inline m-0">
+                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-2 py-1 shadow-xs" title="Quick Approve & Mark Available">
+                      <i class="fa-solid fa-circle-check me-1"></i> Approve
+                    </button>
+                  </form>
+                  <!-- Quick Reject Modal Trigger -->
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" 
+                          data-bs-toggle="modal" data-bs-target="#rejectModal{{ req.id }}" title="Reject / Out of Stock">
+                    <i class="fa-solid fa-circle-xmark me-1"></i> Reject
+                  </button>
+                  <!-- Full Fulfill Modal Trigger -->
+                  <button type="button" class="btn btn-sm btn-light border rounded-pill px-2 py-1" 
+                          data-bs-toggle="modal" data-bs-target="#fulfillModal{{ req.id }}" title="Custom Fulfillment & Remarks">
+                    <i class="fa-solid fa-sliders"></i>
+                  </button>
+                </div>
+              {% elif req.status == 'Part Available' %}
+                <div class="d-inline-flex gap-1 align-items-center">
+                  <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1">Ready at Counter</span>
+                  <button type="button" class="btn btn-xs btn-light border rounded-pill px-2 py-1" 
+                          data-bs-toggle="modal" data-bs-target="#fulfillModal{{ req.id }}" title="Modify Notes/Quantity">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                </div>
+              {% elif req.status == 'Not Available' %}
+                <div class="d-inline-flex gap-1 align-items-center">
+                  <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1">Unavailable</span>
+                  <form action="{{ url_for('parts_request_approve', request_id=req.id) }}" method="POST" class="d-inline m-0">
+                    <button type="submit" class="btn btn-xs btn-outline-success rounded-pill px-2 py-1" title="Restocked? Re-Approve Now">
+                      <i class="fa-solid fa-rotate-left me-1"></i> Re-Approve
+                    </button>
+                  </form>
+                </div>
+              {% else %}
+                <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="btn btn-sm btn-light border rounded-pill px-3">
+                  <i class="fa-solid fa-eye me-1"></i> View Order
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center py-5 text-secondary">
+              <i class="fa-solid fa-clipboard-check fs-1 text-muted opacity-50 mb-3 d-block"></i>
+              <h6 class="fw-bold text-dark">No Pending Technician Requests</h6>
+              <p class="small text-secondary mb-0">All current work orders have their parts fulfilled or in progress.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Modals rendered outside table-responsive to prevent overflow clipping -->
+    {% for req in recent_requests %}
+      <!-- Fulfill Modal -->
+      <div class="modal fade text-start" id="fulfillModal{{ req.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{{ url_for('parts_request_update', request_id=req.id) }}" method="POST">
+              <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark">
+                  <i class="fa-solid fa-box-open text-primary me-2"></i>Fulfill Spare Part Request #REQ-{{ req.id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-4">
+                <div class="p-3 bg-light rounded-3 mb-3 small">
+                  <div><strong>Work Order:</strong> {{ req.invoice_number }} ({{ req.customer_name }})</div>
+                  <div><strong>Technician:</strong> {{ req.tech_name }}</div>
+                  <div><strong>Required Part:</strong> <span class="text-primary fw-bold">{{ req.part_name }}</span> (Qty: {{ req.quantity_requested }})</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Update Status <span class="text-danger">*</span></label>
+                  <select name="status" class="form-select" required>
+                    <option value="Part Available" {% if req.status == 'Part Available' %}selected{% endif %}>
+                      Part Available (Ready for Technician Pickup)
+                    </option>
+                    <option value="Not Available" {% if req.status == 'Not Available' %}selected{% endif %}>
+                      Not Available (Backordered / Out of Stock)
+                    </option>
+                    <option value="Pending" {% if req.status == 'Pending' %}selected{% endif %}>
+                      Pending (Processing in Warehouse)
+                    </option>
+                    <option value="Waiting for Parts" {% if req.status == 'Waiting for Parts' %}selected{% endif %}>
+                      Waiting for Parts
+                    </option>
+                    <option value="Received by Technician" {% if req.status == 'Received by Technician' %}selected{% endif %}>
+                      Received by Technician
+                    </option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Quantity Made Available <span class="text-danger">*</span></label>
+                  <input type="number" name="quantity_available" class="form-control" value="{{ req.quantity_available if req.quantity_available > 0 else req.quantity_requested }}" min="0" required>
+                </div>
+
+                {% if req.part_id %}
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" name="deduct_stock" value="yes" id="deductStockDash{{ req.id }}" 
+                         {% if req.status != 'Part Available' and (req.stock_qty or 0) >= req.quantity_requested %}checked{% endif %}>
+                  <label class="form-check-label small text-secondary" for="deductStockDash{{ req.id }}">
+                    Deduct quantity from warehouse inventory catalog (Current Stock: {{ req.stock_qty or 0 }})
+                  </label>
+                </div>
+                {% endif %}
+
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold text-secondary">Warehouse / Department Remarks</label>
+                  <textarea name="parts_dept_notes" class="form-control" rows="2" placeholder="e.g. Part ready on Shelf Bin A-3. Please collect before 5 PM.">{{ req.parts_dept_notes or '' }}</textarea>
+                </div>
+              </div>
+              <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                  <i class="fa-solid fa-paper-plane me-1"></i> Update & Notify Technician
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Reject Modal -->
+      <div class="modal fade text-start" id="rejectModal{{ req.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{{ url_for('parts_request_reject', request_id=req.id) }}" method="POST">
+              <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-danger">
+                  <i class="fa-solid fa-circle-xmark me-2"></i>Reject Requisition #REQ-{{ req.id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-4">
+                <div class="p-3 bg-light rounded-3 mb-3 small">
+                  <div><strong>Work Order:</strong> {{ req.invoice_number }} ({{ req.customer_name }})</div>
+                  <div><strong>Technician:</strong> {{ req.tech_name }}</div>
+                  <div><strong>Part:</strong> <span class="fw-bold text-dark">{{ req.part_name }}</span> (Qty: {{ req.quantity_requested }})</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Reason for Rejection / Unavailability <span class="text-danger">*</span></label>
+                  <textarea name="reject_reason" class="form-control" rows="3" required placeholder="Specify reason: e.g. Out of stock, part discontinued by manufacturer, backordered for 2 weeks...">Component is currently out of stock / backordered from supplier.</textarea>
+                  <small class="text-muted" style="font-size: 0.72rem;">This reason will be sent to the technician via alert notification.</small>
+                </div>
+              </div>
+              <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                  <i class="fa-solid fa-ban me-1"></i> Confirm Rejection
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Low Stock Warnings & Inventory Quick View -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-7" data-aos="fade-up" data-aos-delay="100">
+      <div class="card fs-card h-100 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Low Stock & Reorder Alert List</h5>
+            <small class="text-secondary">Components reaching or falling below safety buffer</small>
+          </div>
+          <span class="badge bg-warning bg-opacity-25 text-warning-emphasis rounded-pill px-3 py-1">
+            {{ low_stock_parts|length }} Items Alerted
+          </span>
+        </div>
+        <div class="table-responsive">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Part Number & Name</th>
+                <th>Category</th>
+                <th class="text-center">Stock</th>
+                <th class="text-center">Min Threshold</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in low_stock_parts %}
+              <tr>
+                <td>
+                  <strong class="text-dark d-block">{{ p.part_name }}</strong>
+                  <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ p.part_number }}</span>
+                  <small class="text-muted ms-1"><i class="fa-solid fa-location-dot me-1"></i>{{ p.shelf_location }}</small>
+                </td>
+                <td><span class="badge bg-light text-dark border">{{ p.category }}</span></td>
+                <td class="text-center">
+                  {% if p.quantity == 0 %}
+                    <span class="badge bg-danger rounded-pill px-2">Out of Stock (0)</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark rounded-pill px-2">Low: {{ p.quantity }} units</span>
+                  {% endif %}
+                </td>
+                <td class="text-center text-muted font-monospace">{{ p.min_quantity }}</td>
+                <td class="text-end">
+                  <a href="{{ url_for('parts_edit', part_id=p.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                    <i class="fa-solid fa-pen-to-square me-1"></i> Restock
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-secondary">
+                  <i class="fa-solid fa-circle-check text-success me-1"></i> All catalog inventory levels are within safe operating limits.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stock Adjustment & Warehouse Overview -->
+    <div class="col-lg-5" data-aos="fade-up" data-aos-delay="200">
+      <div class="card fs-card h-100 shadow-sm p-4">
+        <h5 class="fw-bold text-dark mb-1">
+          <i class="fa-solid fa-warehouse text-primary me-2"></i>Warehouse Operational Guidelines
+        </h5>
+        <p class="text-secondary small mb-3">Role-based fulfillment standard operating procedure</p>
+
+        <ul class="list-group list-group-flush mb-4 small">
+          <li class="list-group-item px-0 d-flex gap-2">
+            <span class="badge bg-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">1</span>
+            <div><strong>Technician Requests:</strong> Triggered automatically when technician updates work order status to <em>"Waiting for Parts"</em>.</div>
+          </li>
+          <li class="list-group-item px-0 d-flex gap-2">
+            <span class="badge bg-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">2</span>
+            <div><strong>Fulfillment Verification:</strong> Spare Parts staff verify physical bin stock or place supplier procurement POs.</div>
+          </li>
+          <li class="list-group-item px-0 d-flex gap-2">
+            <span class="badge bg-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">3</span>
+            <div><strong>Real-Time Notification:</strong> Marking part <em>"Available"</em> instantly alerts the assigned technician with the pickup bay location.</div>
+          </li>
+          <li class="list-group-item px-0 d-flex gap-2">
+            <span class="badge bg-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">4</span>
+            <div><strong>Handoff & Resume:</strong> Technician confirms receipt at counter, transitioning work order back to <em>"In Progress"</em>.</div>
+          </li>
+        </ul>
+
+        <div class="p-3 bg-light rounded-3 mt-auto">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="text-secondary small d-block">Department Staff On Duty:</span>
+              <strong class="text-dark">{{ current_user.name }} ({{ current_user.role }})</strong>
+            </div>
+            <a href="{{ url_for('parts_inventory') }}" class="btn btn-sm btn-dark rounded-pill px-3">
+              Catalog View
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

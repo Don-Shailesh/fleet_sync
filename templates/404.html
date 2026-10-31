@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Page Not Found - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center my-auto">
+  <div class="p-5 bg-white rounded-4 border shadow-sm mx-auto" style="max-width: 500px;" data-aos="zoom-in">
+    <div class="display-1 fw-extrabold text-primary mb-2">404</div>
+    <h4 class="fw-bold text-dark mb-2">Page Not Found</h4>
+    <p class="text-secondary small mb-4">The vehicle record, report, or service order you requested does not exist or has been archived.</p>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-fs-primary rounded-pill px-4">
+      <i class="fa-solid fa-house me-2"></i> Return to Operations Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

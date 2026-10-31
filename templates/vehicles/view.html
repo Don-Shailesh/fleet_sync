@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.plate_number }}) - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumbs & Actions -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('vehicles_list') }}" class="text-decoration-none">Vehicles</a></li>
+        <li class="breadcrumb-item active fw-bold">{{ vehicle.plate_number }}</li>
+      </ol>
+    </nav>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('vehicle_edit', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+        <i class="fa-solid fa-pen-to-square me-1"></i> Edit Vehicle
+      </a>
+      <a href="{{ url_for('service_create', vehicle_id=vehicle.id) }}" class="btn btn-fs-primary btn-sm rounded-pill px-3">
+        <i class="fa-solid fa-wrench me-1"></i> Create Work Order
+      </a>
+      <form action="{{ url_for('vehicle_delete', vehicle_id=vehicle.id) }}" method="POST" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-delete-confirm" data-item-title="{{ vehicle.plate_number }}">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hero Profile Banner -->
+  <div class="card fs-card mb-4 overflow-hidden" data-aos="fade-up">
+    <div class="row g-0">
+      <div class="col-lg-4 position-relative" style="min-height: 240px; background-color: #0f172a;">
+        <img src="{{ vehicle.image_url or 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=600&q=80' }}"
+             alt="{{ vehicle.make }} {{ vehicle.model }}"
+             class="w-100 h-100 object-fit-cover"
+             onerror="this.src='https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=600&q=80'">
+        <div class="position-absolute top-0 start-0 m-3">
+          {% if vehicle.status == 'Active' %}
+            <span class="fs-badge badge-active shadow"><span class="badge-dot"></span>Active Asset</span>
+          {% elif vehicle.status == 'In Service' %}
+            <span class="fs-badge badge-inservice shadow"><span class="badge-dot"></span>In Service Bay</span>
+          {% elif vehicle.status == 'Maintenance Due' %}
+            <span class="fs-badge badge-overdue shadow"><span class="badge-dot"></span>Service Due</span>
+          {% else %}
+            <span class="fs-badge badge-priority-low shadow"><span class="badge-dot"></span>{{ vehicle.status }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-8 p-4 d-flex flex-column justify-content-between">
+        <div>
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <span class="badge bg-primary bg-opacity-10 text-primary mb-1">{{ vehicle.vehicle_type }}</span>
+              <h2 class="fw-bold text-dark m-0">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h2>
+            </div>
+            <div class="text-lg-end">
+              <span class="badge bg-light text-primary border border-primary border-opacity-25 fs-5 px-3 py-1 font-monospace">
+                {{ vehicle.plate_number }}
+              </span>
+            </div>
+          </div>
+
+          <p class="text-secondary small mb-4">
+            VIN: <span class="font-monospace fw-semibold text-dark">{{ vehicle.vin }}</span> &bull; 
+            Color: <span class="fw-semibold text-dark">{{ vehicle.color or 'N/A' }}</span> &bull; 
+            Fuel: <span class="fw-semibold text-dark">{{ vehicle.fuel_type }}</span>
+          </p>
+
+          <!-- Metrics summary -->
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <div class="p-3 bg-light rounded-3">
+                <span class="text-secondary small d-block" style="font-size: 0.72rem;">CURRENT ODOMETER</span>
+                <h4 class="fw-bold text-dark m-0">{{ vehicle.current_odometer | format_km }}</h4>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="p-3 bg-light rounded-3">
+                <span class="text-secondary small d-block" style="font-size: 0.72rem;">COMPLETED SERVICES</span>
+                <h4 class="fw-bold text-dark m-0">{{ service_history | length }} Logs</h4>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="p-3 bg-light rounded-3">
+                <span class="text-secondary small d-block" style="font-size: 0.72rem;">LIFETIME SERVICE SPENT</span>
+                <h4 class="fw-bold text-success m-0">{{ total_spent | currency }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if vehicle.notes %}
+        <div class="mt-3 p-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-2 small text-dark">
+          <i class="fa-solid fa-circle-exclamation text-warning me-1"></i>
+          <strong>Fleet Notes:</strong> {{ vehicle.notes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Maintenance Schedules & Intervals -->
+    <div class="col-lg-7" data-aos="fade-up" data-aos-delay="100">
+      <div class="card fs-card mb-4">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Preventive Maintenance Schedules</h5>
+            <small class="text-secondary">Automated interval tracking based on time & odometer</small>
+          </div>
+          <a href="{{ url_for('schedule_create') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+            <i class="fa-solid fa-plus me-1"></i> Add Rule
+          </a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Service Name</th>
+                <th>Interval</th>
+                <th>Due Target</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in schedules %}
+              <tr>
+                <td class="fw-semibold text-dark">
+                  {{ s.service_name }}
+                  {% if s.description %}
+                    <small class="text-secondary d-block text-truncate" style="max-width: 200px;">{{ s.description }}</small>
+                  {% endif %}
+                </td>
+                <td class="small text-secondary">
+                  Every {{ s.interval_km | format_km }} / {{ s.interval_months }} mos
+                </td>
+                <td>
+                  <div class="fw-bold {% if s.status == 'Overdue' %}text-danger{% elif s.status == 'Due Soon' %}text-warning{% else %}text-dark{% endif %}">
+                    {{ s.next_due_date | format_date }}
+                  </div>
+                  <small class="text-secondary">At {{ s.next_due_odometer | format_km }}</small>
+                </td>
+                <td>
+                  <span class="fs-badge badge-priority-{{ s.priority.lower() }}">{{ s.priority }}</span>
+                </td>
+                <td>
+                  {% if s.status == 'Overdue' %}
+                    <span class="fs-badge badge-overdue"><span class="badge-dot"></span>Overdue</span>
+                  {% elif s.status == 'Due Soon' %}
+                    <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Due Soon</span>
+                  {% else %}
+                    <span class="fs-badge badge-active"><span class="badge-dot"></span>Upcoming</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a href="{{ url_for('service_create', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Service Now">
+                    <i class="fa-solid fa-wrench"></i>
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-secondary">
+                  No maintenance schedules configured yet. Click "Add Rule" to configure OEM intervals.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Service History Timeline -->
+      <div class="card fs-card">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Service History & Work Orders</h5>
+            <small class="text-secondary">Complete lifecycle log of repairs and invoices</small>
+          </div>
+          <a href="{{ url_for('service_create', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-fs-primary rounded-pill px-3">
+            <i class="fa-solid fa-plus me-1"></i> New Log
+          </a>
+        </div>
+
+        <div class="p-4">
+          {% for record in service_history %}
+          <div class="p-3 mb-3 border rounded-3 bg-light bg-opacity-50">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <a href="{{ url_for('service_detail', record_id=record.id) }}" class="fw-bold text-primary text-decoration-none fs-6">
+                  {{ record.invoice_number }}
+                </a>
+                <span class="text-secondary mx-1">&bull;</span>
+                <span class="fw-semibold text-dark">{{ record.service_type }}</span>
+                <span class="text-secondary small ms-2"><i class="fa-regular fa-calendar me-1"></i>{{ record.service_date | format_date }}</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-dark fs-6">{{ record.total_cost | currency }}</span>
+                <a href="{{ url_for('service_invoice', record_id=record.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Print Invoice">
+                  <i class="fa-solid fa-print"></i>
+                </a>
+              </div>
+            </div>
+
+            <p class="text-secondary small mb-2">{{ record.description or 'Standard routine service performed.' }}</p>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center small text-secondary border-top pt-2 mt-2">
+              <div>
+                <span>Odometer: <strong class="text-dark">{{ record.odometer | format_km }}</strong></span>
+                <span class="mx-2">&bull;</span>
+                <span>Tech: <strong class="text-dark">{{ record.tech_name or 'Staff' }}</strong></span>
+              </div>
+              <div>
+                <span class="badge {% if record.payment_status == 'Paid' %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">
+                  {{ record.payment_status }}
+                </span>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-secondary">
+            <i class="fa-solid fa-folder-open fs-2 mb-2 text-muted"></i>
+            <p>No historical service logs found for this vehicle.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Owner / Customer Details Card -->
+    <div class="col-lg-5" data-aos="fade-up" data-aos-delay="200">
+      <div class="card fs-card mb-4">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Registered Customer Profile</h5>
+          <small class="text-secondary">Owner contact & billing details</small>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="brand-icon-box" style="width: 48px; height: 48px; background: linear-gradient(135deg, #0ea5e9, #4f46e5);">
+              <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold text-dark m-0">{{ vehicle.customer_name }}</h5>
+              {% if vehicle.company_name %}
+                <span class="badge bg-light text-primary border">{{ vehicle.company_name }}</span>
+              {% else %}
+                <span class="badge bg-light text-secondary border">{{ vehicle.customer_type }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <ul class="list-group list-group-flush mb-4">
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+              <span class="text-secondary small">Phone Number</span>
+              <a href="tel:{{ vehicle.customer_phone }}" class="text-decoration-none fw-semibold text-dark">
+                <i class="fa-solid fa-phone text-success me-1"></i>{{ vehicle.customer_phone }}
+              </a>
+            </li>
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+              <span class="text-secondary small">Email Address</span>
+              <a href="mailto:{{ vehicle.customer_email }}" class="text-decoration-none fw-semibold text-primary">
+                {{ vehicle.customer_email }}
+              </a>
+            </li>
+            {% if vehicle.customer_address %}
+            <li class="list-group-item px-0 py-2">
+              <span class="text-secondary small d-block">Service Address</span>
+              <span class="fw-semibold text-dark">{{ vehicle.customer_address }}</span>
+            </li>
+            {% endif %}
+          </ul>
+
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('customer_detail', customer_id=vehicle.customer_id) }}" class="btn btn-outline-secondary rounded-pill">
+              <i class="fa-solid fa-user me-1"></i> View Full Customer Profile
+            </a>
+            <a href="mailto:{{ vehicle.customer_email }}?subject=Service%20Notice:%20{{ vehicle.make }}%20{{ vehicle.model }}" class="btn btn-outline-primary rounded-pill">
+              <i class="fa-solid fa-envelope me-1"></i> Send Customer Email
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

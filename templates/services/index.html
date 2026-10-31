@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Work Orders & History - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark m-0">Work Orders & Service History</h3>
+      <p class="text-secondary small m-0">Manage workshop repair orders, job cards, parts billing, and customer invoices</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+      </a>
+      <a href="{{ url_for('service_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-plus me-1"></i> New Work Order
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3">
+      <div class="card fs-card p-3">
+        <span class="text-secondary small fw-semibold" style="font-size: 0.72rem;">TOTAL COMPLETED BILLED</span>
+        <h3 class="fw-bold text-success mt-1 mb-0">{{ total_rev | currency }}</h3>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <div class="card fs-card p-3">
+        <span class="text-secondary small fw-semibold" style="font-size: 0.72rem;">ACTIVE IN-BAY REPAIRS</span>
+        <h3 class="fw-bold text-primary mt-1 mb-0">{{ in_progress_count }} Jobs</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <div class="card fs-card mb-4 p-3">
+    <form action="{{ url_for('services_list') }}" method="GET" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" name="search" class="form-control border-start-0" placeholder="Search order #, plate, customer, or service type..." value="{{ search }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="">All Job Statuses</option>
+          <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Waiting for Parts" {% if status_filter == 'Waiting for Parts' %}selected{% endif %}>Waiting for Parts</option>
+          <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+          <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="payment" class="form-select" onchange="this.form.submit()">
+          <option value="">All Payment Statuses</option>
+          <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid In Full</option>
+          <option value="Unpaid" {% if payment_filter == 'Unpaid' %}selected{% endif %}>Unpaid / Pending</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <a href="{{ url_for('services_list') }}" class="btn btn-outline-secondary w-100" title="Reset">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Work Orders Table -->
+  <div class="card fs-card overflow-hidden" data-aos="fade-up">
+    <div class="table-responsive">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Order # / Invoice</th>
+            <th>Vehicle Asset</th>
+            <th>Customer</th>
+            <th>Service Details</th>
+            <th>Technician</th>
+            <th>Status</th>
+            <th>Total Cost</th>
+            <th>Payment</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sr in services %}
+          <tr>
+            <td>
+              <a href="{{ url_for('service_detail', record_id=sr.id) }}" class="fw-bold text-primary text-decoration-none font-monospace">
+                {{ sr.invoice_number }}
+              </a>
+              <div class="text-secondary small">{{ sr.service_date | format_date }}</div>
+            </td>
+            <td>
+              <a href="{{ url_for('vehicle_detail', vehicle_id=sr.vehicle_id) }}" class="fw-bold text-dark text-decoration-none">
+                {{ sr.plate_number }}
+              </a>
+              <small class="text-secondary d-block">{{ sr.make }} {{ sr.model }}</small>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">{{ sr.customer_name }}</div>
+              {% if sr.company_name %}
+                <small class="text-secondary">{{ sr.company_name }}</small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ sr.service_type }}</span>
+              <small class="text-secondary d-block">{{ sr.odometer | format_km }}</small>
+            </td>
+            <td>
+              {% if sr.tech_name %}
+                <span class="small text-secondary"><i class="fa-solid fa-user-gear me-1"></i>{{ sr.tech_name }}</span>
+              {% else %}
+                <span class="text-muted small">Unassigned</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if sr.status == 'Completed' %}
+                <span class="fs-badge badge-completed"><span class="badge-dot"></span>Completed</span>
+              {% elif sr.status == 'In Progress' %}
+                <span class="fs-badge badge-inservice"><span class="badge-dot"></span>In Progress</span>
+              {% elif sr.status == 'Waiting for Parts' %}
+                <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Wait Parts</span>
+              {% else %}
+                <span class="fs-badge badge-priority-low"><span class="badge-dot"></span>{{ sr.status }}</span>
+              {% endif %}
+            </td>
+            <td class="fw-bold text-dark">
+              {{ sr.total_cost | currency }}
+            </td>
+            <td>
+              {% if sr.payment_status == 'Paid' %}
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Paid</span>
+              {% else %}
+                <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-2">Unpaid</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <a href="{{ url_for('service_detail', record_id=sr.id) }}" class="btn btn-sm btn-light border rounded-pill px-2" title="View Detail">
+                  <i class="fa-solid fa-eye text-primary"></i>
+                </a>
+                <a href="{{ url_for('service_invoice', record_id=sr.id) }}" target="_blank" class="btn btn-sm btn-light border rounded-pill px-2" title="Print Invoice">
+                  <i class="fa-solid fa-print text-secondary"></i>
+                </a>
+                <a href="{{ url_for('service_edit', record_id=sr.id) }}" class="btn btn-sm btn-light border rounded-pill px-2" title="Edit">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form action="{{ url_for('service_delete', record_id=sr.id) }}" method="POST" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-2 btn-delete-confirm" data-item-title="{{ sr.invoice_number }}">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-secondary">
+              No service records found. Click "New Work Order" to create one.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Work Order {{ service.invoice_number }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb & Top Bar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('services_list') }}" class="text-decoration-none">Work Orders</a></li>
+        <li class="breadcrumb-item active fw-bold font-monospace">{{ service.invoice_number }}</li>
+      </ol>
+    </nav>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if service.status != 'Completed' and current_user.role in ('Technician', 'Admin', 'Spare Parts') %}
+      <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#requestPartsModal">
+        <i class="fa-solid fa-boxes-stacked me-1"></i> Request Spare Parts
+      </button>
+      {% endif %}
+      <a href="{{ url_for('service_invoice', record_id=service.id) }}" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+        <i class="fa-solid fa-print me-1"></i> Print / PDF Invoice
+      </a>
+      <a href="{{ url_for('service_edit', record_id=service.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+        <i class="fa-solid fa-pen-to-square me-1"></i> Edit Work Order
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Left Column -->
+    <div class="col-lg-8" data-aos="fade-up">
+      <!-- Order Header Card -->
+      <div class="card fs-card mb-4 p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <span class="badge bg-light text-primary border font-monospace px-2 py-1 mb-1">
+              {{ service.invoice_number }}
+            </span>
+            <h3 class="fw-bold text-dark m-0">{{ service.service_type }}</h3>
+            <small class="text-secondary">
+              Date: <strong class="text-dark">{{ service.service_date | format_date }}</strong> &bull; 
+              Odometer at Service: <strong class="text-dark">{{ service.odometer | format_km }}</strong>
+            </small>
+          </div>
+          <div class="text-end">
+            {% if service.status == 'Completed' %}
+              <span class="fs-badge badge-completed fs-6 py-2 px-3"><span class="badge-dot"></span>Completed</span>
+            {% elif service.status == 'In Progress' %}
+              <span class="fs-badge badge-inservice fs-6 py-2 px-3"><span class="badge-dot"></span>In Progress</span>
+            {% elif service.status == 'Waiting for Parts' %}
+              <span class="fs-badge badge-duesoon fs-6 py-2 px-3"><span class="badge-dot"></span>Waiting for Parts</span>
+            {% else %}
+              <span class="fs-badge badge-priority-low fs-6 py-2 px-3"><span class="badge-dot"></span>{{ service.status }}</span>
+            {% endif %}
+
+            <div class="mt-2">
+              <span class="badge {% if service.payment_status == 'Paid' %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">
+                {{ service.payment_status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {% if service.description %}
+        <div class="p-3 bg-light rounded-3 mb-3">
+          <span class="text-secondary small fw-semibold d-block">WORK ORDER DESCRIPTION / CUSTOMER CONCERN</span>
+          <p class="m-0 text-dark">{{ service.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if service.technician_notes %}
+        <div class="p-3 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3">
+          <span class="text-info-emphasis small fw-semibold d-block">
+            <i class="fa-solid fa-wrench me-1"></i> TECHNICIAN DIAGNOSIS & REMARKS
+          </span>
+          <p class="m-0 text-dark">{{ service.technician_notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Spare Parts Requisition & Tracking Status Box -->
+      {% if part_requests or service.status == 'Waiting for Parts' %}
+      <div class="card fs-card mb-4 overflow-hidden border border-warning border-opacity-25 shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10 border-0 pt-3 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked text-warning-emphasis"></i>
+            <h6 class="fw-bold text-dark m-0">Spare Parts Department Requisition Tracking</h6>
+          </div>
+          {% if service.status != 'Completed' and current_user.role in ('Technician', 'Admin') %}
+          <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#requestPartsModal">
+            <i class="fa-solid fa-plus me-1"></i> Request Another Component
+          </button>
+          {% endif %}
+        </div>
+
+        <div class="table-responsive">
+          <table class="fs-table table-sm table-align-middle">
+            <thead class="bg-light">
+              <tr>
+                <th>Req ID</th>
+                <th>Requested Part</th>
+                <th class="text-center">Qty Req</th>
+                <th class="text-center">Qty Ready</th>
+                <th>Status</th>
+                <th>Department Remarks</th>
+                <th class="text-end">Fulfillment Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in part_requests %}
+              <tr class="{% if pr.status == 'Part Available' %}table-success bg-opacity-25{% endif %}">
+                <td>
+                  <span class="badge bg-light text-dark border font-monospace">#REQ-{{ pr.id }}</span>
+                  <small class="text-muted d-block" style="font-size: 0.7rem;">{{ pr.requested_at | format_date }}</small>
+                </td>
+                <td>
+                  <strong class="text-dark d-block">{{ pr.part_name }}</strong>
+                  {% if pr.part_number %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border font-monospace" style="font-size: 0.7rem;">{{ pr.part_number }}</span>
+                  {% endif %}
+                  {% if pr.shelf_location %}
+                    <small class="text-muted ms-1"><i class="fa-solid fa-location-dot me-1"></i>{{ pr.shelf_location }}</small>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">{{ pr.quantity_requested }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge {% if pr.quantity_available >= pr.quantity_requested %}bg-success text-white{% elif pr.quantity_available > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %} rounded-pill px-2">
+                    {{ pr.quantity_available }}
+                  </span>
+                </td>
+                <td>
+                  {% if pr.status == 'Part Available' %}
+                    <span class="badge bg-success text-white rounded-pill px-2 py-1 shadow-xs animate__animated animate__pulse animate__infinite">
+                      <i class="fa-solid fa-circle-check me-1"></i> Part Available!
+                    </span>
+                  {% elif pr.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
+                    <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning rounded-pill px-2 py-1">
+                      <i class="fa-solid fa-clock me-1"></i> {{ pr.status }}
+                    </span>
+                  {% elif pr.status == 'Not Available' %}
+                    <span class="badge bg-danger bg-opacity-15 text-danger rounded-pill px-2 py-1">
+                      <i class="fa-solid fa-ban me-1"></i> Not Available
+                    </span>
+                  {% elif pr.status == 'Received by Technician' %}
+                    <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
+                      <i class="fa-solid fa-hand-holding me-1"></i> Received by Tech
+                    </span>
+                  {% elif pr.status == 'Repair In Progress' %}
+                    <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1">
+                      <i class="fa-solid fa-wrench me-1"></i> Repair In Progress
+                    </span>
+                  {% elif pr.status == 'Completed' %}
+                    <span class="badge bg-light text-success border rounded-pill px-2 py-1">
+                      <i class="fa-solid fa-check-double me-1"></i> Completed
+                    </span>
+                  {% else %}
+                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">{{ pr.status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <small class="text-secondary">{{ pr.parts_dept_notes or pr.technician_notes or 'Pending review' }}</small>
+                </td>
+                <td class="text-end">
+                  {% if pr.status == 'Part Available' and current_user.role in ('Technician', 'Admin') %}
+                    <form action="{{ url_for('parts_request_mark_received', request_id=pr.id) }}" method="POST" class="d-inline m-0">
+                      <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs">
+                        <i class="fa-solid fa-hand-holding me-1"></i> Mark Received & Resume
+                      </button>
+                    </form>
+                  {% elif current_user.role in ('Spare Parts', 'Admin') and pr.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
+                    <a href="{{ url_for('parts_requests') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                      Fulfill in Dept &rarr;
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">Updated</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="text-center py-3 text-secondary small">
+                  No parts requests logged yet. Use "Request Spare Parts" button to requisition required parts.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Request Spare Parts Modal -->
+      <div class="modal fade" id="requestPartsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{{ url_for('service_request_part', record_id=service.id) }}" method="POST">
+              <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark">
+                  <i class="fa-solid fa-boxes-stacked text-warning me-2"></i>Request Spare Parts
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-4">
+                <div class="p-3 bg-light rounded-3 mb-3 small">
+                  <div><strong>Work Order:</strong> {{ service.invoice_number }}</div>
+                  <div><strong>Vehicle:</strong> {{ service.make }} {{ service.model }} ({{ service.plate_number }})</div>
+                  <div><strong>Customer:</strong> {{ service.customer_name }}</div>
+                  <div class="text-muted mt-1">This request automatically updates the work order status to <strong>Waiting for Parts</strong> and notifies the Spare Parts Department.</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Select from Inventory Catalog (Optional)</label>
+                  <select id="modal-part-select" name="part_id" class="form-select">
+                    <option value="">-- Choose from Catalog or Enter Custom Below --</option>
+                    {% for cp in catalog_parts %}
+                      <option value="{{ cp.id }}" data-name="{{ cp.part_name }}" data-num="{{ cp.part_number }}">
+                        {{ cp.part_name }} ({{ cp.part_number }}) - Stock: {{ cp.quantity }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Part Name <span class="text-danger">*</span></label>
+                  <input type="text" id="modal-part-name" name="part_name" class="form-control" placeholder="e.g. OEM Electronic Brake Actuator Module" required>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-sm-7">
+                    <label class="form-label small fw-semibold text-secondary">Part Number / SKU</label>
+                    <input type="text" id="modal-part-num" name="part_number" class="form-control font-monospace" placeholder="e.g. SP-BRK-001">
+                  </div>
+                  <div class="col-sm-5">
+                    <label class="form-label small fw-semibold text-secondary">Quantity Req <span class="text-danger">*</span></label>
+                    <input type="number" name="quantity_requested" class="form-control text-center fw-bold" value="1" min="1" required>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Priority</label>
+                  <select name="priority" class="form-select">
+                    <option value="Standard">Standard</option>
+                    <option value="Urgent">Urgent (Vehicle immobilized)</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold text-secondary">Technician Remarks & Diagnosis</label>
+                  <textarea name="technician_notes" class="form-control" rows="2" placeholder="Specify why the part is needed, defective symptoms, or courier instructions..."></textarea>
+                </div>
+              </div>
+              <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning text-dark rounded-pill px-4 shadow-sm fw-bold">
+                  <i class="fa-solid fa-paper-plane me-1"></i> Send Request to Spare Parts
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized Service Line Items -->
+      <div class="card fs-card mb-4 overflow-hidden">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Itemized Parts & Labor Breakdown</h5>
+          <small class="text-secondary">Line items billed for this repair order</small>
+        </div>
+
+        <div class="table-responsive">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Item / Description</th>
+                <th class="text-end">Qty / Hrs</th>
+                <th class="text-end">Unit Price</th>
+                <th class="text-end">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <td>
+                  <span class="badge {% if item.item_type == 'Labor' %}bg-info text-dark{% elif item.item_type == 'Part' %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill px-2">
+                    {{ item.item_type }}
+                  </span>
+                </td>
+                <td class="fw-semibold text-dark">{{ item.item_name }}</td>
+                <td class="text-end">{{ item.quantity }}</td>
+                <td class="text-end">{{ item.unit_price | currency }}</td>
+                <td class="text-end fw-bold">{{ item.total_price | currency }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-secondary">
+                  No line items attached. Edit order to add parts and labor hours.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Financial Summary Footer -->
+        <div class="p-4 bg-light bg-opacity-50 border-top">
+          <div class="row justify-content-end">
+            <div class="col-md-6 col-lg-5">
+              <div class="d-flex justify-content-between py-1 small">
+                <span class="text-secondary">Parts & Materials Subtotal:</span>
+                <span class="fw-semibold text-dark">{{ service.parts_cost | currency }}</span>
+              </div>
+              <div class="d-flex justify-content-between py-1 small">
+                <span class="text-secondary">Labor Charges Subtotal:</span>
+                <span class="fw-semibold text-dark">{{ service.labor_cost | currency }}</span>
+              </div>
+              <div class="d-flex justify-content-between py-1 small">
+                <span class="text-secondary">Estimated Tax (8%):</span>
+                <span class="fw-semibold text-dark">{{ service.tax_amount | currency }}</span>
+              </div>
+              <div class="d-flex justify-content-between py-2 border-top mt-2">
+                <span class="fw-bold fs-6">Grand Total:</span>
+                <span class="fw-bold fs-5 text-primary">{{ service.total_cost | currency }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar Column -->
+    <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
+      <!-- Vehicle Specs Card -->
+      <div class="card fs-card mb-4">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Vehicle Information</h5>
+          <small class="text-secondary">Serviced asset details</small>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <h5 class="fw-bold text-dark m-0">{{ service.year }} {{ service.make }} {{ service.model }}</h5>
+          <div class="d-flex align-items-center gap-2 my-2">
+            <span class="badge bg-light text-primary border font-monospace">{{ service.plate_number }}</span>
+            <small class="text-secondary">VIN: {{ service.vin }}</small>
+          </div>
+          <div class="small text-secondary mb-3">
+            <span>Color: <strong class="text-dark">{{ service.color or 'N/A' }}</strong></span> &bull; 
+            <span>Fuel: <strong class="text-dark">{{ service.fuel_type }}</strong></span>
+          </div>
+          <a href="{{ url_for('vehicle_detail', vehicle_id=service.vehicle_id) }}" class="btn btn-outline-secondary btn-sm w-100 rounded-pill">
+            <i class="fa-solid fa-gauge-high me-1"></i> View 360° Vehicle Profile
+          </a>
+        </div>
+      </div>
+
+      <!-- Customer Card -->
+      <div class="card fs-card mb-4">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Billed Customer</h5>
+          <small class="text-secondary">Account recipient</small>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <h5 class="fw-bold text-dark m-0">{{ service.customer_name }}</h5>
+          {% if service.company_name %}
+            <span class="text-primary small fw-semibold d-block mb-2">{{ service.company_name }}</span>
+          {% endif %}
+          <div class="small my-2">
+            <div class="text-secondary"><i class="fa-solid fa-phone me-1 text-success"></i>{{ service.customer_phone }}</div>
+            <div class="text-secondary"><i class="fa-regular fa-envelope me-1 text-primary"></i>{{ service.customer_email }}</div>
+          </div>
+          <a href="{{ url_for('customer_detail', customer_id=service.customer_id) }}" class="btn btn-outline-secondary btn-sm w-100 rounded-pill mt-2">
+            <i class="fa-solid fa-user me-1"></i> Customer Profile
+          </a>
+        </div>
+      </div>
+
+      <!-- Assigned Technician -->
+      <div class="card fs-card">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+          <h5 class="fw-bold text-dark m-0">Assigned Technician</h5>
+          <small class="text-secondary">Lead mechanic on order</small>
+        </div>
+        <div class="card-body px-4 pb-4">
+          {% if service.tech_name %}
+            <div class="d-flex align-items-center gap-3">
+              <div class="brand-icon-box" style="width: 44px; height: 44px; background: #334155;">
+                <i class="fa-solid fa-user-gear"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark m-0">{{ service.tech_name }}</h6>
+                <small class="text-secondary">{{ service.tech_role or 'Technician' }}</small>
+              </div>
+            </div>
+          {% else %}
+            <span class="text-muted small">No technician assigned yet.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const partSelect = document.getElementById('modal-part-select');
+    const partNameInput = document.getElementById('modal-part-name');
+    const partNumInput = document.getElementById('modal-part-num');
+
+    if (partSelect && partNameInput && partNumInput) {
+      partSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected && selected.value) {
+          partNameInput.value = selected.getAttribute('data-name') || '';
+          partNumInput.value = selected.getAttribute('data-num') || '';
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

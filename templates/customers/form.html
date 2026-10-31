@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}{% if customer %}Edit {{ customer.name }}{% else %}New Customer{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('customers_list') }}" class="text-decoration-none">Customers</a></li>
+        <li class="breadcrumb-item active fw-bold">{% if customer %}Edit {{ customer.name }}{% else %}New Customer Profile{% endif %}</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h4 class="fw-bold text-dark m-0">{% if customer %}Edit Customer Profile{% else %}Create Customer / Fleet Account{% endif %}</h4>
+            <small class="text-secondary">Billing contacts, company affiliations, and address</small>
+          </div>
+          <span class="brand-icon-box" style="width: 44px; height: 44px;">
+            <i class="fa-solid fa-user-plus"></i>
+          </span>
+        </div>
+
+        <form action="" method="POST">
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label" for="cust-name">Primary Contact Name <span class="text-danger">*</span></label>
+              <input type="text" id="cust-name" name="name" class="form-control" placeholder="e.g. Ananya Deshmukh" value="{{ customer.name if customer else '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cust-type">Account Classification</label>
+              <select id="cust-type" name="customer_type" class="form-select">
+                <option value="Individual" {% if customer and customer.customer_type == 'Individual' %}selected{% endif %}>Individual Client</option>
+                <option value="Fleet / Corporate" {% if customer and customer.customer_type == 'Fleet / Corporate' %}selected{% endif %}>Fleet / Corporate Account</option>
+              </select>
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label" for="cust-company">Company / Fleet Organization Name</label>
+              <input type="text" id="cust-company" name="company_name" class="form-control" placeholder="e.g. Apex Logistics India Pvt Ltd (optional for individuals)" value="{{ customer.company_name if customer and customer.company_name else '' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="cust-email">Email Address</label>
+              <input type="email" id="cust-email" name="email" class="form-control" placeholder="contact@example.com" value="{{ customer.email if customer else '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cust-phone">Phone Number <span class="text-danger">*</span></label>
+              <input type="text" id="cust-phone" name="phone" class="form-control" placeholder="+91 98210 00000" value="{{ customer.phone if customer else '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="cust-address">Street Address</label>
+              <input type="text" id="cust-address" name="address" class="form-control" placeholder="Plot C-14, MIDC Industrial Area" value="{{ customer.address if customer and customer.address else '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="cust-city">City</label>
+              <input type="text" id="cust-city" name="city" class="form-control" placeholder="Mumbai" value="{{ customer.city if customer and customer.city else '' }}">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label" for="cust-postal">Postal Code</label>
+              <input type="text" id="cust-postal" name="postal_code" class="form-control" placeholder="400093" value="{{ customer.postal_code if customer and customer.postal_code else '' }}">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="cust-notes">Internal Notes & Service Terms</label>
+              <textarea id="cust-notes" name="notes" class="form-control" rows="3" placeholder="Special billing conditions, preferred payment terms, priority requirements...">{{ customer.notes if customer and customer.notes else '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('customers_list') }}" class="btn btn-light border px-4">Cancel</a>
+            <button type="submit" class="btn btn-fs-primary px-4">
+              <i class="fa-solid fa-check me-2"></i> {% if customer %}Save Changes{% else %}Create Account{% endif %}
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

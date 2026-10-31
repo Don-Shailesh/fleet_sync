@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Schedules - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark m-0">Preventive Maintenance Schedules</h3>
+      <p class="text-secondary small m-0">Automated odometer and time-based maintenance rules for vehicles</p>
+    </div>
+    <div class="d-flex gap-2">
+      <form action="{{ url_for('reminders_scan') }}" method="POST" class="m-0">
+        <button type="submit" class="btn btn-outline-primary rounded-pill px-3 shadow-sm">
+          <i class="fa-solid fa-robot me-1"></i> Scan Due Services
+        </button>
+      </form>
+      <a href="{{ url_for('schedule_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-plus me-1"></i> Add Schedule Rule
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Bar -->
+  <div class="card fs-card mb-4 p-3">
+    <form action="{{ url_for('schedules_list') }}" method="GET" class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="">All Maintenance Statuses</option>
+          <option value="Overdue" {% if status_filter == 'Overdue' %}selected{% endif %}>⚠️ Overdue Services</option>
+          <option value="Due Soon" {% if status_filter == 'Due Soon' %}selected{% endif %}>⏳ Due Soon (Within 14 Days / 1000 km)</option>
+          <option value="Upcoming" {% if status_filter == 'Upcoming' %}selected{% endif %}>✅ Normal Upcoming</option>
+        </select>
+      </div>
+      <div class="col-md-5">
+        <select name="priority" class="form-select" onchange="this.form.submit()">
+          <option value="">All Priority Levels</option>
+          <option value="Critical" {% if priority_filter == 'Critical' %}selected{% endif %}>Critical Priority</option>
+          <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High Priority</option>
+          <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium Priority</option>
+          <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low Priority</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <a href="{{ url_for('schedules_list') }}" class="btn btn-outline-secondary w-100" title="Reset">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Schedules Table Card -->
+  <div class="card fs-card overflow-hidden" data-aos="fade-up">
+    <div class="table-responsive">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Service Schedule</th>
+            <th>Interval Setting</th>
+            <th>Due Target (Date & Odo)</th>
+            <th>Current Odometer</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in schedules %}
+          <tr class="{% if s.status == 'Overdue' %}table-danger bg-opacity-25{% elif s.status == 'Due Soon' %}table-warning bg-opacity-25{% endif %}">
+            <td>
+              <a href="{{ url_for('vehicle_detail', vehicle_id=s.vehicle_id) }}" class="fw-bold text-primary text-decoration-none font-monospace">
+                {{ s.plate_number }}
+              </a>
+              <small class="text-secondary d-block">{{ s.make }} {{ s.model }}</small>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ s.service_name }}</div>
+              {% if s.description %}
+                <small class="text-secondary text-truncate d-block" style="max-width: 240px;">{{ s.description }}</small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="small fw-semibold text-secondary">
+                {{ s.interval_km | format_km }} / {{ s.interval_months }} mos
+              </span>
+            </td>
+            <td>
+              <div class="fw-bold {% if s.status == 'Overdue' %}text-danger{% elif s.status == 'Due Soon' %}text-warning{% else %}text-dark{% endif %}">
+                <i class="fa-regular fa-calendar me-1"></i>{{ s.next_due_date | format_date }}
+              </div>
+              <small class="text-secondary">Target: {{ s.next_due_odometer | format_km }}</small>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">{{ s.current_odometer | format_km }}</span>
+            </td>
+            <td>
+              <span class="fs-badge badge-priority-{{ s.priority.lower() }}">{{ s.priority }}</span>
+            </td>
+            <td>
+              {% if s.status == 'Overdue' %}
+                <span class="fs-badge badge-overdue"><span class="badge-dot"></span>Overdue</span>
+              {% elif s.status == 'Due Soon' %}
+                <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Due Soon</span>
+              {% else %}
+                <span class="fs-badge badge-active"><span class="badge-dot"></span>Upcoming</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <a href="{{ url_for('service_create', vehicle_id=s.vehicle_id) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1" title="Start Service">
+                  <i class="fa-solid fa-wrench me-1"></i> Log Service
+                </a>
+                <a href="{{ url_for('schedule_edit', schedule_id=s.id) }}" class="btn btn-sm btn-light border rounded-pill px-2 py-1" title="Edit">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form action="{{ url_for('schedule_delete', schedule_id=s.id) }}" method="POST" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-2 py-1 btn-delete-confirm" data-item-title="{{ s.service_name }}">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-secondary">
+              No maintenance schedules matched the selected criteria.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

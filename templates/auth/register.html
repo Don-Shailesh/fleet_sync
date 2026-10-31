@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Register Staff - {{ app_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="container py-5 d-flex align-items-center justify-content-center flex-grow-1">
+  <div class="card fs-card shadow-lg p-4 p-md-5 border-0 w-100" style="max-width: 520px;" data-aos="zoom-in">
+    <div class="text-center mb-4">
+      <div class="d-inline-flex brand-icon-box mb-3">
+        <i class="fa-solid fa-truck-fast"></i>
+      </div>
+      <h3 class="fw-bold">Register Service Personnel</h3>
+      <p class="text-secondary small">Create an advisor or technician profile for FleetSync</p>
+    </div>
+
+    <form action="{{ url_for('register') }}" method="POST">
+      <div class="mb-3">
+        <label class="form-label" for="reg-name">Full Name</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-solid fa-user"></i></span>
+          <input type="text" id="reg-name" name="name" class="form-control" placeholder="e.g. Robert Taylor" required>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="reg-email">Email Address</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-regular fa-envelope"></i></span>
+          <input type="email" id="reg-email" name="email" class="form-control" placeholder="r.taylor@fleetsync.io" required>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col-md-6">
+          <label class="form-label" for="reg-role">Role</label>
+          <select id="reg-role" name="role" class="form-select">
+            <option value="Technician">Technician</option>
+            <option value="Spare Parts">Spare Parts Department</option>
+            <option value="Service Advisor">Service Advisor</option>
+            <option value="Admin">Administrator</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="reg-phone">Phone</label>
+          <input type="text" id="reg-phone" name="phone" class="form-control" placeholder="+1 (555) 000-0000">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="reg-password">Password</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-solid fa-lock"></i></span>
+          <input type="password" id="reg-password" name="password" class="form-control" placeholder="Min. 6 characters" required>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" for="reg-confirm">Confirm Password</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-solid fa-check-double"></i></span>
+          <input type="password" id="reg-confirm" name="confirm_password" class="form-control" placeholder="Re-enter password" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-fs-primary w-100 py-2">
+        <i class="fa-solid fa-user-plus me-2"></i> Create Profile
+      </button>
+    </form>
+
+    <div class="text-center mt-4">
+      <span class="text-secondary small">Already have an account?</span>
+      <a href="{{ url_for('login') }}" class="small fw-semibold text-primary text-decoration-none ms-1">Sign In</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

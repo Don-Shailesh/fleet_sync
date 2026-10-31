@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }}{% endblock %} | Enterprise Vehicle Service Management</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5.3.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- FontAwesome 6.5.1 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- AOS Animation CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+  <!-- Custom Design System CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if current_user %}
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon-box">
+        <i class="fa-solid fa-truck-fast"></i>
+      </div>
+      <div>
+        <div class="fw-bold text-white fs-5 lh-1">{{ app_name }}</div>
+        <small class="text-secondary" style="font-size: 0.72rem; letter-spacing: 0.05em;">FLEET INTELLIGENCE</small>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% if current_user.role == 'Spare Parts' %}
+        <!-- Dedicated Spare Parts Department Navigation -->
+        <div class="nav-section-title">Spare Parts Operations</div>
+        <a href="{{ url_for('parts_dashboard') }}" class="sidebar-link {% if request.endpoint == 'parts_dashboard' %}active{% endif %}">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Parts Dashboard</span>
+        </a>
+        <a href="{{ url_for('parts_inventory') }}" class="sidebar-link {% if request.endpoint in ('parts_inventory', 'parts_edit') %}active{% endif %}">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>Inventory Catalog</span>
+          {% if low_stock_parts_count > 0 %}
+            <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size: 0.7rem;">{{ low_stock_parts_count }} Low</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('parts_requests') }}" class="sidebar-link {% if request.endpoint == 'parts_requests' %}active{% endif %}">
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span>Technician Requests</span>
+          {% if pending_parts_requests_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.7rem;">{{ pending_parts_requests_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('parts_create') }}" class="sidebar-link {% if request.endpoint == 'parts_create' %}active{% endif %}">
+          <i class="fa-solid fa-plus-circle"></i>
+          <span>Register New Part</span>
+        </a>
+      {% else %}
+        <!-- Core Operations for Admin & Technicians -->
+        <div class="nav-section-title">Core Operations</div>
+        <a href="{{ url_for('dashboard') }}" class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('vehicles_list') }}" class="sidebar-link {% if 'vehicle' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-car-side"></i>
+          <span>Fleet Vehicles</span>
+        </a>
+        <a href="{{ url_for('customers_list') }}" class="sidebar-link {% if 'customer' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-building-user"></i>
+          <span>Customers & Accounts</span>
+        </a>
+
+        <div class="nav-section-title">Service Center</div>
+        <a href="{{ url_for('services_list') }}" class="sidebar-link {% if 'service' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-wrench"></i>
+          <span>Work Orders & History</span>
+        </a>
+
+        {% if current_user.role == 'Technician' %}
+        <a href="{{ url_for('technician_parts_requests') }}" class="sidebar-link {% if request.endpoint == 'technician_parts_requests' %}active{% endif %}">
+          <i class="fa-solid fa-boxes-packing"></i>
+          <span>My Parts Requests</span>
+          {% if unread_available_parts_count > 0 %}
+            <span class="badge bg-success rounded-pill ms-auto animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">
+              {{ unread_available_parts_count }} Ready
+            </span>
+          {% endif %}
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('schedules_list') }}" class="sidebar-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Maintenance Intervals</span>
+          {% if overdue_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.7rem;">{{ overdue_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('reminders_list') }}" class="sidebar-link {% if 'reminder' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-bell"></i>
+          <span>Automated Reminders</span>
+        </a>
+
+        {% if current_user.role == 'Admin' %}
+        <div class="nav-section-title">Spare Parts Dept</div>
+        <a href="{{ url_for('parts_dashboard') }}" class="sidebar-link {% if request.endpoint == 'parts_dashboard' %}active{% endif %}">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Parts Control Center</span>
+        </a>
+        <a href="{{ url_for('parts_inventory') }}" class="sidebar-link {% if request.endpoint in ('parts_inventory', 'parts_create', 'parts_edit') %}active{% endif %}">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>Parts Inventory</span>
+          {% if low_stock_parts_count > 0 %}
+            <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size: 0.7rem;">{{ low_stock_parts_count }} Low</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('parts_requests') }}" class="sidebar-link {% if request.endpoint == 'parts_requests' %}active{% endif %}">
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span>Technician Requests</span>
+          {% if pending_parts_requests_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.7rem;">{{ pending_parts_requests_count }}</span>
+          {% endif %}
+        </a>
+        {% endif %}
+
+        <div class="nav-section-title">Intelligence & Reports</div>
+        <a href="{{ url_for('reports') }}" class="sidebar-link {% if request.endpoint == 'reports' %}active{% endif %}">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Financial & Performance</span>
+        </a>
+
+        {% if current_user.role == 'Admin' %}
+        <div class="nav-section-title">Admin Panel</div>
+        <a href="{{ url_for('invoice_report') }}" class="sidebar-link {% if request.endpoint == 'invoice_report' %}active{% endif %}">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          <span>Invoice Report</span>
+        </a>
+        {% endif %}
+      {% endif %}
+    </nav>
+
+    <!-- User Profile Footer in Sidebar -->
+    <div class="sidebar-user-footer p-3 border-top border-secondary border-opacity-10 mt-auto bg-black bg-opacity-20">
+      <div class="d-flex align-items-center gap-2">
+        <img src="{{ current_user.avatar or 'https://api.dicebear.com/7.x/initials/svg?seed=' + current_user.name }}" alt="Avatar" class="rounded-circle" width="38" height="38">
+        <div class="overflow-hidden flex-grow-1">
+          <div class="text-white text-truncate fw-semibold small">{{ current_user.name }}</div>
+          <span class="badge bg-primary bg-opacity-25 text-info-emphasis rounded-pill" style="font-size: 0.68rem;">{{ current_user.role }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="text-secondary hover-text-white p-1" title="Sign Out">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Column -->
+  <div class="app-main">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebar-toggle">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="header-search d-none d-lg-block">
+          <form action="{{ url_for('vehicles_list') }}" method="GET">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" class="form-control" placeholder="Search VIN, license plate, customer...">
+          </form>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <!-- In-App Notification Bell Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light border rounded-circle position-relative p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+            <i class="fa-solid fa-bell text-secondary"></i>
+            {% if unread_notifications_count > 0 or unread_available_parts_count > 0 %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" style="font-size: 0.65rem;">
+                {{ unread_notifications_count + unread_available_parts_count }}
+              </span>
+            {% endif %}
+          </button>
+          <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 mt-2" style="width: 340px; max-height: 420px; overflow-y: auto;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+              <strong class="text-dark small"><i class="fa-solid fa-bell me-1 text-primary"></i> Notifications</strong>
+              {% if unread_notifications_count > 0 %}
+              <form action="{{ url_for('notifications_mark_all_read') }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-link btn-sm text-decoration-none p-0 text-muted" style="font-size: 0.75rem;">Mark all read</button>
+              </form>
+              {% endif %}
+            </div>
+            <div class="list-group list-group-flush small">
+              {% for notif in user_notifications %}
+              <a href="{{ notif.link or '#' }}" class="list-group-item list-group-item-action p-3 {% if not notif.is_read %}bg-primary bg-opacity-10{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <strong class="text-dark">{{ notif.title }}</strong>
+                  <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">{{ notif.created_at | format_date }}</span>
+                </div>
+                <div class="text-secondary small">{{ notif.message }}</div>
+              </a>
+              {% else %}
+              <div class="p-4 text-center text-secondary small">
+                <i class="fa-regular fa-bell-slash text-muted fa-2x mb-2 d-block"></i>
+                No new notifications
+              </div>
+              {% endfor %}
+            </div>
+            {% if current_user.role == 'Technician' %}
+            <div class="p-2 border-top text-center bg-light rounded-bottom-4">
+              <a href="{{ url_for('technician_parts_requests') }}" class="small fw-semibold text-primary text-decoration-none">
+                View All My Parts Requests &rarr;
+              </a>
+            </div>
+            {% elif current_user.role in ('Spare Parts', 'Admin') %}
+            <div class="p-2 border-top text-center bg-light rounded-bottom-4">
+              <a href="{{ url_for('parts_requests') }}" class="small fw-semibold text-primary text-decoration-none">
+                View All Spare Parts Requests &rarr;
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Quick Overdue Alerts -->
+        {% if overdue_count > 0 %}
+          <a href="{{ url_for('schedules_list', status='Overdue') }}" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 d-flex align-items-center gap-2 shadow-sm animate__animated animate__pulse animate__infinite">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span class="fw-semibold">{{ overdue_count }} Overdue Service{% if overdue_count > 1 %}s{% endif %}</span>
+          </a>
+        {% endif %}
+
+        <!-- Quick Action Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-fs-primary dropdown-toggle btn-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+            <i class="fa-solid fa-plus"></i>
+            <span class="d-none d-sm-inline">Quick Action</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2">
+            {% if current_user.role == 'Spare Parts' %}
+              <li><a class="dropdown-item py-2" href="{{ url_for('parts_create') }}"><i class="fa-solid fa-boxes-stacked text-primary me-2"></i>Register New Part</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('parts_requests') }}"><i class="fa-solid fa-clipboard-list text-warning me-2"></i>View Technician Requests</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('parts_inventory') }}"><i class="fa-solid fa-cubes text-info me-2"></i>Inventory Catalog</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('parts_dashboard') }}"><i class="fa-solid fa-gauge-high text-success me-2"></i>Parts Dashboard</a></li>
+            {% elif current_user.role == 'Technician' %}
+              <li><a class="dropdown-item py-2" href="{{ url_for('service_create') }}"><i class="fa-solid fa-wrench text-primary me-2"></i>New Work Order</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('technician_parts_requests') }}"><i class="fa-solid fa-boxes-packing text-success me-2"></i>My Parts Requests</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('services_list') }}"><i class="fa-solid fa-clipboard-check text-info me-2"></i>Assigned Work Orders</a></li>
+            {% else %}
+              <li><a class="dropdown-item py-2" href="{{ url_for('service_create') }}"><i class="fa-solid fa-wrench text-primary me-2"></i>New Work Order</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('vehicle_create') }}"><i class="fa-solid fa-car text-info me-2"></i>Register Vehicle</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('customer_create') }}"><i class="fa-solid fa-user-plus text-success me-2"></i>New Customer</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('schedule_create') }}"><i class="fa-solid fa-calendar-plus text-warning me-2"></i>Schedule Maintenance</a></li>
+              <li><a class="dropdown-item py-2" href="{{ url_for('parts_create') }}"><i class="fa-solid fa-boxes-stacked text-secondary me-2"></i>Register Spare Part</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form action="{{ url_for('reminders_scan') }}" method="POST" class="m-0">
+                  <button type="submit" class="dropdown-item py-2 text-primary"><i class="fa-solid fa-robot me-2"></i>Scan & Queue Reminders</button>
+                </form>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <!-- Direct Stable Logout Button in Header -->
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-2 shadow-xs" title="Sign Out of FleetSync">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="d-none d-sm-inline fw-semibold">Logout</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Body Container -->
+    <main class="flex-grow-1 p-3 p-md-4">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm border-0 d-flex align-items-center gap-2 mb-4" role="alert">
+              {% if category == 'success' %}
+                <i class="fa-solid fa-circle-check fs-5 text-success"></i>
+              {% elif category == 'danger' %}
+                <i class="fa-solid fa-circle-xmark fs-5 text-danger"></i>
+              {% elif category == 'warning' %}
+                <i class="fa-solid fa-triangle-exclamation fs-5 text-warning"></i>
+              {% else %}
+                <i class="fa-solid fa-circle-info fs-5 text-info"></i>
+              {% endif %}
+              <div>{{ message }}</div>
+              <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-3 px-4 text-secondary small d-flex flex-wrap justify-content-between align-items-center">
+      <div>
+        <strong>{{ app_name }} Enterprise</strong> &bull; {{ app_tagline }}
+      </div>
+      <div>
+        <span>Database: <strong class="text-success">MySQL (XAMPP)</strong></span> &bull; 
+        <span>v2.4.0 Production</span>
+      </div>
+    </footer>
+  </div>
+</div>
+{% else %}
+  <!-- Layout for Unauthenticated Guests (Login / Register) -->
+  <main class="min-vh-100 d-flex flex-column">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="container pt-4">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm border-0 d-flex align-items-center gap-2" role="alert">
+              <i class="fa-solid fa-circle-info"></i>
+              <div>{{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block auth_content %}{% endblock %}
+  </main>
+{% endif %}
+
+<!-- Bootstrap 5.3.3 Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- AOS Animation Library -->
+<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+<script>
+  AOS.init({ duration: 600, once: true });
+</script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  // Global Double Submit Prevention for POST forms
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (form && form.method && form.method.toUpperCase() === 'POST') {
+      if (form.getAttribute('data-submitting') === 'true') {
+        e.preventDefault();
+        return false;
+      }
+      form.setAttribute('data-submitting', 'true');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        setTimeout(function () {
+          submitBtn.disabled = true;
+        }, 100);
+      }
+    }
+  });
+</script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

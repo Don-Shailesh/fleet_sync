@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Customers & Accounts - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark m-0">Customers & Fleet Accounts</h3>
+      <p class="text-secondary small m-0">Manage corporate fleets, private vehicle owners, and commercial accounts</p>
+    </div>
+    <div>
+      <a href="{{ url_for('customer_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-user-plus me-1"></i> Add New Customer
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Filter -->
+  <div class="card fs-card mb-4 p-3">
+    <form action="{{ url_for('customers_list') }}" method="GET" class="row g-2 align-items-center">
+      <div class="col-md-7">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" name="search" class="form-control border-start-0" placeholder="Search customer name, company, email, phone..." value="{{ search }}">
+        </div>
+      </div>
+      <div class="col-md-4">
+        <select name="type" class="form-select" onchange="this.form.submit()">
+          <option value="">All Account Types</option>
+          <option value="Fleet / Corporate" {% if type_filter == 'Fleet / Corporate' %}selected{% endif %}>Fleet / Corporate Accounts</option>
+          <option value="Individual" {% if type_filter == 'Individual' %}selected{% endif %}>Individual Clients</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <a href="{{ url_for('customers_list') }}" class="btn btn-outline-secondary w-100" title="Reset">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Customer Table Card -->
+  <div class="card fs-card overflow-hidden" data-aos="fade-up">
+    <div class="table-responsive">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Customer / Company</th>
+            <th>Account Type</th>
+            <th>Contact Details</th>
+            <th>City / Location</th>
+            <th>Fleet Size</th>
+            <th>Lifetime Spend</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon-box" style="width: 40px; height: 40px; font-size: 1rem; background: linear-gradient(135deg, #0ea5e9, #4f46e5);">
+                  <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                  <a href="{{ url_for('customer_detail', customer_id=c.id) }}" class="fw-bold text-dark text-decoration-none">
+                    {{ c.name }}
+                  </a>
+                  {% if c.company_name %}
+                    <small class="text-primary d-block fw-semibold">{{ c.company_name }}</small>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if c.customer_type == 'Fleet / Corporate' %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1">
+                  <i class="fa-solid fa-building me-1"></i> Corporate Fleet
+                </span>
+              {% else %}
+                <span class="badge bg-light text-secondary border rounded-pill px-3 py-1">
+                  <i class="fa-solid fa-user me-1"></i> Individual
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <div><i class="fa-solid fa-phone text-secondary me-1 small"></i>{{ c.phone }}</div>
+              <small class="text-secondary"><i class="fa-regular fa-envelope me-1 small"></i>{{ c.email }}</small>
+            </td>
+            <td>
+              <span class="text-dark">{{ c.city or 'Chicago' }}</span>
+              <small class="text-secondary d-block">{{ c.postal_code or '' }}</small>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border px-2 py-1 fw-bold fs-6">
+                {{ c.vehicle_count }} <small class="fw-normal text-secondary">Vehicles</small>
+              </span>
+            </td>
+            <td class="fw-bold text-success fs-6">
+              {{ c.total_spent | currency }}
+            </td>
+            <td class="text-end">
+              <div class="dropdown">
+                <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  Action
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                  <li><a class="dropdown-item py-2" href="{{ url_for('customer_detail', customer_id=c.id) }}"><i class="fa-solid fa-eye text-primary me-2"></i>View Account</a></li>
+                  <li><a class="dropdown-item py-2" href="{{ url_for('customer_edit', customer_id=c.id) }}"><i class="fa-solid fa-pen text-secondary me-2"></i>Edit Profile</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form action="{{ url_for('customer_delete', customer_id=c.id) }}" method="POST" class="m-0">
+                      <button type="submit" class="dropdown-item py-2 text-danger btn-delete-confirm" data-item-title="{{ c.name }}">
+                        <i class="fa-solid fa-trash-can me-2"></i>Delete
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-secondary">
+              No customers found. Click "Add New Customer" to register accounts.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
