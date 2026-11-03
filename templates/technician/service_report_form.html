@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Final Service Report: {{ job.invoice_number }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('tech_jobs') }}" class="text-decoration-none">My Assigned Jobs</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('tech_job_detail', job_id=job.id) }}" class="text-decoration-none font-monospace">{{ job.invoice_number }}</a></li>
+        <li class="breadcrumb-item active fw-bold">Step 6: Certified Final Repair Report</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom flex-wrap gap-2">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
+                <i class="fa-solid fa-file-signature me-1"></i> Workflow Stage 6: Final Repair Report & Sign-off
+              </span>
+              <span class="badge bg-light text-primary border font-monospace">{{ job.invoice_number }}</span>
+            </div>
+            <h4 class="fw-bold text-dark m-0">Official Vehicle Service & Inspection Report</h4>
+            <small class="text-secondary">Document completed procedures, reconcile consumed vs. unused spare parts, test results, and final vehicle handover condition</small>
+          </div>
+          <span class="brand-icon-box bg-success text-white" style="width: 48px; height: 48px; font-size: 1.3rem;">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </span>
+        </div>
+
+        <!-- Vehicle & Customer Quick Reference -->
+        <div class="p-3 bg-light rounded-4 mb-4 border">
+          <div class="row g-3 small">
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">VEHICLE ASSET</span>
+              <strong class="text-dark">{{ job.plate_number }}</strong> &bull; {{ job.make }} {{ job.model }}
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">CUSTOMER</span>
+              <strong class="text-dark">{{ job.customer_name }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">SERVICE TYPE</span>
+              <strong class="text-primary">{{ job.service_type }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">CURRENT ODOMETER</span>
+              <strong class="text-dark">{{ job.odometer | format_km }}</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if job.admin_review_comments %}
+        <!-- Admin Review Feedback Callout -->
+        <div class="alert alert-success border-0 rounded-4 p-3 mb-4">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="fa-solid fa-circle-check text-success"></i>
+            <strong class="text-dark">Admin Quality Review Feedback:</strong>
+          </div>
+          <p class="small text-secondary mb-0"><em>"{{ job.admin_review_comments }}"</em></p>
+        </div>
+        {% endif %}
+
+        <!-- Report Form -->
+        <form action="{{ url_for('tech_job_report_form', job_id=job.id) }}" method="POST" enctype="multipart/form-data">
+
+          <!-- Section 1: Problem Diagnosis -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark" for="diagnosis">
+              1. Problem Diagnosis & Inspection Findings <span class="text-danger">*</span>
+            </label>
+            <small class="text-secondary d-block mb-2">Detail the root cause of vehicle fault, initial test observations, or diagnostic scan codes.</small>
+            <textarea class="form-control" id="diagnosis" name="diagnosis" rows="3" required 
+                      placeholder="e.g. Diagnostic scan returned DTC P0420. Physical inspection confirmed torn front strut mount bushing and fouled spark plugs on cylinder 2...">{{ report.diagnosis if report else (job.inspection_diagnosis or '') }}</textarea>
+          </div>
+
+          <!-- Section 2: Work Performed -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark" for="work_performed">
+              2. Work Performed & Mechanical Procedures Executed <span class="text-danger">*</span>
+            </label>
+            <small class="text-secondary d-block mb-2">Itemize all mechanical, electrical, and hydraulic operations executed during servicing.</small>
+            <textarea class="form-control" id="work_performed" name="work_performed" rows="4" required 
+                      placeholder="e.g. 1. Disassembled front strut assembly. 2. Pressed out damaged top mount bushing and seated new OEM bushing. 3. Replaced 4x iridium spark plugs. 4. Cleared fault memory and completed wheel alignment...">{{ report.work_performed if report else '' }}</textarea>
+          </div>
+
+          <!-- Section 3: Solution Provided & Test Results -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-7">
+              <label class="form-label fw-bold text-dark" for="solution_provided">
+                3. Solution Provided & Resolution Summary <span class="text-danger">*</span>
+              </label>
+              <textarea class="form-control" id="solution_provided" name="solution_provided" rows="3" required 
+                        placeholder="e.g. Suspension noise eliminated over speed bumps. Smooth idling restored and OBD emission monitors passed in readiness state...">{{ report.solution_provided if report else '' }}</textarea>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-bold text-dark" for="test_results">
+                4. Quality Test Results & Road Verification
+              </label>
+              <textarea class="form-control" id="test_results" name="test_results" rows="3" 
+                        placeholder="e.g. 8 km road test completed. Zero abnormal vibration, brake shudder, or pulling. OBD scan verified zero DTCs.">{{ report.test_results if report else '' }}</textarea>
+            </div>
+          </div>
+
+          <!-- Section 5: Reconciled Spare Parts (Used vs. Unused) -->
+          <div class="card border rounded-4 mb-4 p-4 bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <h5 class="fw-bold text-dark m-0">
+                <i class="fa-solid fa-boxes-packing text-primary me-2"></i>5. Spare Parts Consumption & Reconciliation
+              </h5>
+              <span class="badge bg-light text-secondary border">Parts Used Reconciled</span>
+            </div>
+            <small class="text-secondary d-block mb-3">
+              Record the quantities actually installed on the vehicle. Predefined catalog rates and taxes are applied automatically on final submission.
+            </small>
+
+            {% if req_parts %}
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered bg-white shadow-xs rounded-3 small align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Requested Component</th>
+                    <th style="width: 100px;" class="text-center">Qty Req</th>
+                    <th style="width: 120px;" class="text-center">Qty Used <span class="text-danger">*</span></th>
+                    <th style="min-width: 250px;">If Unused: Reason / Explanation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pr in req_parts %}
+                  {% set p_unit = pr.catalog_price or pr.unit_price or 0.0 %}
+                  {% set p_tax = pr.tax_rate if pr.tax_rate is defined and pr.tax_rate is not none else 18.0 %}
+                  <tr>
+                    <td>
+                      <strong class="text-dark">{{ pr.part_name }}</strong>
+                      {% if pr.part_number %}<small class="text-muted d-block font-monospace">{{ pr.part_number }}</small>{% endif %}
+                    </td>
+                    <td class="text-center font-monospace">{{ pr.quantity_requested }}</td>
+                    <td class="text-center">
+                      <input type="number" name="part_used_qty_{{ pr.id }}" id="part_qty_{{ pr.id }}" 
+                             class="form-control form-control-sm text-center font-monospace part-qty-input" 
+                             data-unit-price="{{ p_unit }}" data-tax-rate="{{ p_tax }}" data-part-id="{{ pr.id }}"
+                             value="{{ pr.quantity_used if pr.quantity_used > 0 else pr.quantity_requested }}" 
+                             min="0" max="{{ pr.quantity_requested }}" required>
+                    </td>
+                    <td>
+                      <input type="text" name="part_unused_reason_{{ pr.id }}" class="form-control form-control-sm" 
+                             value="{{ pr.unused_explanation or '' }}" placeholder="If 0 or less used, explain why...">
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold text-secondary" for="parts_used_summary">
+                Summary of Parts & Consumables Utilized
+              </label>
+              <textarea class="form-control" id="parts_used_summary" name="parts_used_summary" rows="2" 
+                        placeholder="e.g. 2x Front Strut Mount Bushings (SP-SUSP-099), 4x NGK Iridium Spark Plugs...">{{ report.parts_used_summary if report else default_parts_used }}</textarea>
+            </div>
+
+            <div>
+              <label class="form-label small fw-semibold text-secondary" for="unused_parts_explanation">
+                Explanation for Any Unused Parts (If Applicable)
+              </label>
+              <textarea class="form-control" id="unused_parts_explanation" name="unused_parts_explanation" rows="2" 
+                        placeholder="e.g. Original stabilizer links were thoroughly inspected and in serviceable condition; returned 2x links to warehouse bin 4.">{{ report.unused_parts_explanation if report else '' }}</textarea>
+            </div>
+          </div>
+
+          <!-- Section 6: Labor Operation & Hours -->
+          <div class="card border rounded-4 mb-4 p-4 bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <h5 class="fw-bold text-dark m-0">
+                <i class="fa-solid fa-wrench text-primary me-2"></i>6. Labor Operation & Service Duration
+              </h5>
+              <span class="badge bg-light text-secondary border">Workshop Predefined Standards</span>
+            </div>
+            <small class="text-secondary d-block mb-3">
+              Select the primary mechanical operation performed and record actual bay labor hours. Standard rates and charges will be compiled automatically upon submission.
+            </small>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-7">
+                <label class="form-label fw-bold text-dark" for="labor_rate_id">
+                  Predefined Labor Operation / Service Standard <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="labor_rate_id" name="labor_rate_id" onchange="updateLaborSummary()" required>
+                  {% for lr in labor_rates %}
+                  <option value="{{ lr.id }}" 
+                          data-service-type="{{ lr.service_type }}"
+                          data-charge-type="{{ lr.charge_type }}" 
+                          data-hourly-rate="{{ lr.hourly_rate }}" 
+                          data-fixed-price="{{ lr.fixed_price }}" 
+                          data-standard-hours="{{ lr.standard_hours }}" 
+                          data-tax-rate="{{ lr.tax_rate }}"
+                          {% if report and report.labor_service_type == lr.service_type %}selected
+                          {% elif not report and (job.service_type in lr.service_type or loop.first) %}selected{% endif %}>
+                    {{ lr.service_type }} &bull; {% if lr.charge_type == 'Hourly' %}Standard Est. {{ lr.standard_hours }} hrs{% else %}Fixed Standard Package{% endif %}
+                  </option>
+                  {% else %}
+                  <option value="" data-service-type="General Mechanical Labor" data-charge-type="Hourly" data-hourly-rate="800.00" data-fixed-price="0.00" data-standard-hours="2.0" data-tax-rate="18.0">
+                    General Mechanical Labor &bull; Standard Est. 2.0 hrs
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-5">
+                <label class="form-label fw-bold text-dark" for="labor_hours">
+                  Actual Bay Labor Hours <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <input type="number" step="0.25" min="0.25" class="form-control text-center font-monospace fw-bold" 
+                         id="labor_hours" name="labor_hours" 
+                         value="{{ report.labor_hours if report and report.labor_hours else (job.estimated_duration_hours or '2.5') }}" 
+                         placeholder="e.g. 3.5" onchange="updateLaborSummary()" oninput="updateLaborSummary()" required>
+                  <span class="input-group-text">hours</span>
+                </div>
+                <small class="text-secondary" style="font-size: 0.72rem;">Hands-on servicing duration executed in bay</small>
+              </div>
+            </div>
+
+            <!-- Labor Operation Summary Banner -->
+            <div class="p-3 bg-white rounded-3 border">
+              <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem;">
+                <i class="fa-solid fa-clock text-primary me-1"></i> Recorded Labor Summary:
+              </span>
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="font-monospace text-dark fw-semibold" id="laborCalcFormulaText">
+                  Operation: {{ (labor_rates[0].service_type if labor_rates else 'General Mechanical Labor') }} &bull; Time Logged: 2.50 hrs
+                </div>
+                <span class="badge bg-primary bg-opacity-15 text-primary fs-6 px-3 py-2 font-monospace" id="laborCalculatedBadge">
+                  Duration Logged: 2.50 hrs
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 7: Work Order Handover & Admin Billing Notice -->
+          <div class="card border border-primary border-opacity-25 rounded-4 mb-4 p-4 bg-white shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-invoice text-primary fa-lg"></i>
+                <h5 class="fw-bold text-dark m-0">Work Order Handover & Billing Verification</h5>
+              </div>
+              <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-3 py-1">Admin Review Workflow</span>
+            </div>
+            
+            <p class="small text-secondary mb-3">
+              On final submission, the system will automatically generate the official customer bill from the verified spare parts consumed and predefined workshop labor rates, and route it directly to the Admin Panel for review, verification, and customer billing approval.
+            </p>
+
+            <div class="alert alert-info bg-info bg-opacity-10 border-0 rounded-3 mb-0 small text-dark">
+              <i class="fa-solid fa-shield-halved me-1 text-primary"></i>
+              <strong>Role Security:</strong> All financial pricing, labor rates, taxes, and billing totals are managed exclusively by Workshop Administration. Technicians can view only the parts used and the technical work report submitted.
+            </div>
+          </div>
+
+          <!-- Section 8: Vehicle Condition, Completion Date & Odometer -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-dark" for="final_vehicle_condition">
+                7. Final Vehicle Condition <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" id="final_vehicle_condition" name="final_vehicle_condition" required>
+                <option value="Road-Ready & Excellent" {% if not report or report.final_vehicle_condition == 'Road-Ready & Excellent' %}selected{% endif %}>Road-Ready & Excellent</option>
+                <option value="Good - Routine Service Satisfied" {% if report and report.final_vehicle_condition == 'Good - Routine Service Satisfied' %}selected{% endif %}>Good - Routine Service Satisfied</option>
+                <option value="Satisfactory - Follow-up Recommended" {% if report and report.final_vehicle_condition == 'Satisfactory - Follow-up Recommended' %}selected{% endif %}>Satisfactory - Follow-up Recommended</option>
+                <option value="Operational - Minor Wear Noted" {% if report and report.final_vehicle_condition == 'Operational - Minor Wear Noted' %}selected{% endif %}>Operational - Minor Wear Noted</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-dark" for="completion_date">
+                Completion Date <span class="text-danger">*</span>
+              </label>
+              <input type="date" class="form-control" id="completion_date" name="completion_date" 
+                     value="{{ report.completion_date if report else now.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-dark" for="final_odometer">
+                Final Bay Odometer (km) <span class="text-danger">*</span>
+              </label>
+              <input type="number" class="form-control" id="final_odometer" name="final_odometer" 
+                     value="{{ job.odometer }}" min="{{ job.odometer }}" required>
+            </div>
+          </div>
+
+          <!-- Section 8: Remarks & Follow-up Advisory -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-dark" for="follow_up_recommendations">
+                8. Follow-up Recommendations & Preventive Care
+              </label>
+              <textarea class="form-control" id="follow_up_recommendations" name="follow_up_recommendations" rows="3" 
+                        placeholder="e.g. Recheck wheel lug torque at 100 km. Recommend transmission fluid service at next scheduled 50,000 km checkup.">{{ report.follow_up_recommendations if report else '' }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-dark" for="remarks">
+                9. Service Remarks & Customer Handover Notes
+              </label>
+              <textarea class="form-control" id="remarks" name="remarks" rows="3" 
+                        placeholder="e.g. Vehicle washed and vacuumed. Keys placed in service advisor locker #4. All replaced parts returned or disposed of per policy.">{{ report.remarks if report else '' }}</textarea>
+            </div>
+          </div>
+
+          <!-- Section 10: Before & After Photos -->
+          <div class="mb-4 p-4 bg-light rounded-4 border">
+            <h6 class="fw-bold text-dark mb-3">
+              <i class="fa-solid fa-camera text-primary me-1"></i> 10. Service Documentation Photos (Before & After)
+            </h6>
+            <div class="row g-4">
+              <!-- Before Image -->
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary" for="before_image_file">
+                  Before Repair Photo (Upload File or Enter URL)
+                </label>
+                <input type="file" class="form-control mb-2" id="before_image_file" name="before_image_file" accept="image/*">
+                <input type="url" class="form-control form-control-sm" id="before_image_url" name="before_image_url" 
+                       placeholder="Or paste external image URL..." value="{{ report.before_image_url if report else '' }}">
+                {% if report and report.before_image_url %}
+                <div class="mt-2">
+                  <small class="text-muted d-block mb-1">Current Before Photo:</small>
+                  <img src="{{ report.before_image_url }}" alt="Before" class="rounded border shadow-xs" style="max-height: 100px;">
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- After Image -->
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary" for="after_image_file">
+                  After Repair Photo (Upload File or Enter URL)
+                </label>
+                <input type="file" class="form-control mb-2" id="after_image_file" name="after_image_file" accept="image/*">
+                <input type="url" class="form-control form-control-sm" id="after_image_url" name="after_image_url" 
+                       placeholder="Or paste external image URL..." value="{{ report.after_image_url if report else '' }}">
+                {% if report and report.after_image_url %}
+                <div class="mt-2">
+                  <small class="text-muted d-block mb-1">Current After Photo:</small>
+                  <img src="{{ report.after_image_url }}" alt="After" class="rounded border shadow-xs" style="max-height: 100px;">
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-success border-0 rounded-4 p-3 small mb-4">
+            <i class="fa-solid fa-circle-check text-success me-1"></i>
+            <strong>Work Order Handover & Admin Billing Review:</strong> Submitting this report will finalize your technical findings and consumed parts list. The itemized bill will be automatically compiled from workshop standards and dispatched directly to the Admin Panel for review and customer billing approval.
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top flex-wrap gap-2">
+            <a href="{{ url_for('tech_job_detail', job_id=job.id) }}" class="btn btn-light rounded-pill px-4">
+              <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+            </a>
+            <div class="d-flex gap-2">
+              <button type="submit" name="submit_action" value="submit_for_approval" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold">
+                <i class="fa-solid fa-check-double me-1"></i> Finalize & Submit Work Report
+              </button>
+            </div>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function updateLaborSummary() {
+  const lrSelect = document.getElementById('labor_rate_id');
+  const selectedOpt = lrSelect ? lrSelect.options[lrSelect.selectedIndex] : null;
+  const hoursInput = document.getElementById('labor_hours');
+  const hours = parseFloat(hoursInput ? hoursInput.value : 0) || 0.0;
+  
+  let serviceName = 'General Mechanical Labor';
+  if (selectedOpt) {
+    serviceName = selectedOpt.getAttribute('data-service-type') || selectedOpt.text.split('•')[0].trim();
+  }
+  
+  const formulaEl = document.getElementById('laborCalcFormulaText');
+  if (formulaEl) {
+    formulaEl.innerText = `Operation: ${serviceName} • Time Logged: ${hours.toFixed(2)} hrs`;
+  }
+  const badgeEl = document.getElementById('laborCalculatedBadge');
+  if (badgeEl) {
+    badgeEl.innerText = `Duration Logged: ${hours.toFixed(2)} hrs`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  updateLaborSummary();
+});
+</script>
+{% endblock %}

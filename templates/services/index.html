@@ -48,11 +48,18 @@
       </div>
       <div class="col-md-3">
         <select name="status" class="form-select" onchange="this.form.submit()">
-          <option value="">All Job Statuses</option>
-          <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
-          <option value="Waiting for Parts" {% if status_filter == 'Waiting for Parts' %}selected{% endif %}>Waiting for Parts</option>
-          <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
-          <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+          <option value="">All Workflow Stages</option>
+          <option value="Inspection Submitted" {% if status_filter == 'Inspection Submitted' %}selected{% endif %}>1. Inspection Submitted</option>
+          <option value="Parts Under Review" {% if status_filter == 'Parts Under Review' %}selected{% endif %}>2. Parts Under Review</option>
+          <option value="Awaiting Parts" {% if status_filter == 'Awaiting Parts' %}selected{% endif %}>2. Awaiting Parts (Lead Times)</option>
+          <option value="Ready to Schedule" {% if status_filter == 'Ready to Schedule' %}selected{% endif %}>3. Ready to Schedule</option>
+          <option value="Scheduled" {% if status_filter == 'Scheduled' %}selected{% endif %}>4. Scheduled & Authorized</option>
+          <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>5. In Progress</option>
+          <option value="Awaiting Admin Approval" {% if status_filter == 'Awaiting Admin Approval' %}selected{% endif %}>5. Awaiting Admin Approval</option>
+          <option value="Revision Required" {% if status_filter == 'Revision Required' %}selected{% endif %}>5. Revision Required</option>
+          <option value="Approved - Pending Final Report" {% if status_filter == 'Approved - Pending Final Report' %}selected{% endif %}>6. Approved (Final Report)</option>
+          <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>6. Completed & Closed</option>
+          <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending / New</option>
         </select>
       </div>
       <div class="col-md-3">
@@ -120,15 +127,9 @@
               {% endif %}
             </td>
             <td>
-              {% if sr.status == 'Completed' %}
-                <span class="fs-badge badge-completed"><span class="badge-dot"></span>Completed</span>
-              {% elif sr.status == 'In Progress' %}
-                <span class="fs-badge badge-inservice"><span class="badge-dot"></span>In Progress</span>
-              {% elif sr.status == 'Waiting for Parts' %}
-                <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Wait Parts</span>
-              {% else %}
-                <span class="fs-badge badge-priority-low"><span class="badge-dot"></span>{{ sr.status }}</span>
-              {% endif %}
+              {% set smeta = sr.status | workflow_meta %}
+              <span class="fs-badge {{ smeta.badge_class }}"><span class="badge-dot"></span>{{ sr.status }}</span>
+              <small class="text-secondary d-block mt-1" style="font-size: 0.7rem;"><strong>Resp:</strong> {{ smeta.responsible }}</small>
             </td>
             <td class="fw-bold text-dark">
               {{ sr.total_cost | currency }}

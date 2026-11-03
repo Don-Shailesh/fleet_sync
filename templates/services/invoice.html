@@ -130,37 +130,56 @@
       </div>
     </div>
 
-    <!-- Service Description -->
-    <div class="p-3 bg-light rounded-3 mb-4 small">
-      <strong>Service Order Scope:</strong> {{ service.service_type }} &bull; {{ service.description or 'Routine scheduled maintenance and vehicle inspection.' }}
+    <!-- Service Description & Scope -->
+    <div class="p-3 bg-light rounded-3 mb-4 small border">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+        <div><strong>Service Scope:</strong> {{ service.service_type }}</div>
+        <span class="badge bg-light text-secondary border font-monospace">Tax Invoice</span>
+      </div>
+      <div>{{ service.description or 'Standard routine service and preventive vehicle maintenance.' }}</div>
       {% if service.tech_name %}
-        <div class="mt-1 text-muted">Certified Service Technician: <strong>{{ service.tech_name }}</strong></div>
+        <div class="mt-2 text-muted border-top pt-1">
+          Certified Technician: <strong>{{ service.tech_name }}</strong>
+          {% if service.labor_hours_billed %}&bull; Bay Labor Time: <strong>{{ service.labor_hours_billed }} hours</strong>{% endif %}
+          {% if service.admin_approved_at %}&bull; Admin Quality Verified: <strong>{{ service.admin_approved_at | format_date }}</strong>{% endif %}
+        </div>
       {% endif %}
     </div>
 
-    <!-- Itemized Table -->
+    <!-- Itemized Billing Table (Predefined Parts & Labor Standards) -->
     <table class="table align-middle mb-4">
       <thead class="table-light">
         <tr>
-          <th style="width: 15%;">Item Type</th>
-          <th>Description & Specifications</th>
-          <th class="text-end" style="width: 15%;">Qty / Hours</th>
-          <th class="text-end" style="width: 15%;">Unit Rate</th>
-          <th class="text-end" style="width: 15%;">Amount</th>
+          <th style="width: 14%;">Type</th>
+          <th>Description & Standard Code</th>
+          <th class="text-end" style="width: 14%;">Qty / Hours</th>
+          <th class="text-end" style="width: 16%;">Standard Rate</th>
+          <th class="text-center" style="width: 12%;">Tax (GST)</th>
+          <th class="text-end" style="width: 18%;">Line Total</th>
         </tr>
       </thead>
       <tbody>
         {% for item in items %}
         <tr>
-          <td><span class="badge bg-light text-dark border">{{ item.item_type }}</span></td>
-          <td class="fw-semibold">{{ item.item_name }}</td>
-          <td class="text-end">{{ item.quantity }}</td>
-          <td class="text-end">{{ item.unit_price | currency }}</td>
-          <td class="text-end fw-bold">{{ item.total_price | currency }}</td>
+          <td>
+            <span class="badge {% if item.item_type == 'Labor' %}bg-info bg-opacity-15 text-info border border-info border-opacity-25{% elif item.item_type == 'Part' %}bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25{% else %}bg-secondary{% endif %} rounded-pill px-2 py-1">
+              {{ item.item_type }}
+            </span>
+          </td>
+          <td>
+            <strong class="text-dark">{{ item.item_name }}</strong>
+            {% if item.item_type == 'Labor' and service.labor_charge_type %}
+              <small class="text-muted d-block font-monospace" style="font-size: 0.72rem;">Standard {{ service.labor_charge_type }} Calculation</small>
+            {% endif %}
+          </td>
+          <td class="text-end font-monospace">{{ item.quantity }}</td>
+          <td class="text-end font-monospace">{{ item.unit_price | currency }}</td>
+          <td class="text-center font-monospace small text-muted">{{ item.tax_rate or 18 }}%</td>
+          <td class="text-end fw-bold font-monospace text-dark">{{ item.total_price | currency }}</td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" class="text-center py-3 text-secondary">General service fee billed.</td>
+          <td colspan="6" class="text-center py-3 text-secondary">General service fee billed.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -168,25 +187,61 @@
 
     <!-- Totals Calculation -->
     <div class="row justify-content-end mb-4">
-      <div class="col-5">
+      <div class="col-6 col-md-5">
         <div class="d-flex justify-content-between py-1 small">
           <span class="text-secondary">Parts & Materials Subtotal:</span>
-          <span class="fw-semibold text-dark">{{ service.parts_cost | currency }}</span>
+          <span class="fw-semibold text-dark font-monospace">{{ service.parts_cost | currency }}</span>
         </div>
         <div class="d-flex justify-content-between py-1 small">
           <span class="text-secondary">Labor Service Charges:</span>
-          <span class="fw-semibold text-dark">{{ service.labor_cost | currency }}</span>
+          <span class="fw-semibold text-dark font-monospace">{{ service.labor_cost | currency }}</span>
         </div>
         <div class="d-flex justify-content-between py-1 small">
-          <span class="text-secondary">Sales & Environmental Tax (8%):</span>
-          <span class="fw-semibold text-dark">{{ service.tax_amount | currency }}</span>
+          <span class="text-secondary">Predefined GST Tax:</span>
+          <span class="fw-semibold text-dark font-monospace">{{ service.tax_amount | currency }}</span>
         </div>
+        {% if service.discount_amount and service.discount_amount > 0 %}
+        <div class="d-flex justify-content-between py-1 small text-success">
+          <span>Fleet / Promotional Discount:</span>
+          <span class="fw-bold font-monospace">-{{ service.discount_amount | currency }}</span>
+        </div>
+        {% endif %}
         <div class="d-flex justify-content-between py-2 border-top mt-2">
           <span class="fw-bold fs-5 text-dark">Invoice Total:</span>
-          <span class="fw-bold fs-4 text-primary">{{ service.total_cost | currency }}</span>
+          <span class="fw-bold fs-4 text-primary font-monospace">{{ service.total_cost | currency }}</span>
         </div>
       </div>
     </div>
+
+    {% if service_report %}
+    <!-- Certified Technical Work & Inspection Findings Summary -->
+    <div class="p-3 bg-light rounded-3 mb-4 small border">
+      <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+        <span class="fw-bold text-dark text-uppercase" style="font-size: 0.72rem;">
+          <i class="fa-solid fa-clipboard-check text-success me-1"></i> Certified Technical Work Summary
+        </span>
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">
+          Vehicle Condition: {{ service_report.final_vehicle_condition or 'Road-Ready & Excellent' }}
+        </span>
+      </div>
+      <div class="row g-2">
+        <div class="col-sm-6">
+          <strong>Procedures Executed:</strong>
+          <p class="m-0 text-muted">{{ service_report.work_performed }}</p>
+        </div>
+        <div class="col-sm-6">
+          <strong>Solution & Testing:</strong>
+          <p class="m-0 text-muted">{{ service_report.solution_provided }} {% if service_report.test_results %}&bull; Test: {{ service_report.test_results }}{% endif %}</p>
+        </div>
+        {% if service_report.follow_up_recommendations %}
+        <div class="col-12 mt-2 pt-2 border-top">
+          <strong>Follow-up Advisory:</strong>
+          <span class="text-muted">{{ service_report.follow_up_recommendations }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Barcode & Authorization Signatures -->
     <div class="border-top pt-4 mt-4">

@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Inspection & Parts Requisition: {{ job.invoice_number }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('tech_jobs') }}" class="text-decoration-none">My Assigned Jobs</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('tech_job_detail', job_id=job.id) }}" class="text-decoration-none font-monospace">{{ job.invoice_number }}</a></li>
+        <li class="breadcrumb-item active fw-bold">Vehicle Inspection & Parts Requisition</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom flex-wrap gap-2">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill small">
+                <i class="fa-solid fa-clipboard-check me-1"></i> Workflow Stage 1: Vehicle Inspection
+              </span>
+              <span class="badge bg-light text-primary border font-monospace">{{ job.invoice_number }}</span>
+            </div>
+            <h4 class="fw-bold text-dark m-0">Vehicle Inspection & Spare Parts Requisition</h4>
+            <small class="text-secondary">Document symptoms observed, diagnostic root causes, and requisition required components from warehouse</small>
+          </div>
+          <span class="brand-icon-box bg-primary text-white" style="width: 48px; height: 48px; font-size: 1.3rem;">
+            <i class="fa-solid fa-magnifying-glass-chart"></i>
+          </span>
+        </div>
+
+        <!-- Vehicle & Customer Quick Reference -->
+        <div class="p-3 bg-light rounded-4 mb-4 border">
+          <div class="row g-3 small">
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">VEHICLE ASSET</span>
+              <strong class="text-dark">{{ job.plate_number }}</strong> &bull; {{ job.make }} {{ job.model }} ({{ job.year }})
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">CUSTOMER</span>
+              <strong class="text-dark">{{ job.customer_name }}</strong>
+              {% if job.company_name %}<span class="text-muted d-block" style="font-size: 0.72rem;">{{ job.company_name }}</span>{% endif %}
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">SERVICE TYPE</span>
+              <strong class="text-primary">{{ job.service_type }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+              <span class="text-secondary d-block" style="font-size: 0.72rem;">ODOMETER / PRIORITY</span>
+              <strong class="text-dark">{{ job.odometer | format_km }}</strong> &bull; <span class="badge bg-warning text-dark">{{ job.priority }} Priority</span>
+            </div>
+          </div>
+        </div>
+
+        {% if job.description %}
+        <!-- Customer Problem Callout -->
+        <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mb-4">
+          <span class="text-warning-emphasis small fw-bold d-block mb-1">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i> CUSTOMER REPORTED PROBLEM / SYMPTOMS:
+          </span>
+          <p class="m-0 text-dark small">{{ job.description }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Inspection Form -->
+        <form action="{{ url_for('tech_job_inspect', job_id=job.id) }}" method="POST" enctype="multipart/form-data" id="inspectionForm">
+
+          <!-- Section 1: Symptoms Observed -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark" for="inspection_symptoms">
+              1. Observed Symptoms & Bay Test Observations <span class="text-danger">*</span>
+            </label>
+            <small class="text-secondary d-block mb-2">Describe visual, audible, or mechanical symptoms noticed during intake (noises, leaks, vibration, warning lights, OBD codes).</small>
+            <textarea class="form-control" id="inspection_symptoms" name="inspection_symptoms" rows="3" required
+                      placeholder="e.g. Excessive squealing from front left wheel during low speed braking. Check Engine Light illuminated with OBD code P0302 misfire. Fluid leakage observed around steering rack boot...">{{ job.inspection_symptoms or '' }}</textarea>
+          </div>
+
+          <!-- Section 2: Diagnosis & Root Cause Findings -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark" for="inspection_diagnosis">
+              2. Technical Diagnosis & Root Cause Analysis <span class="text-danger">*</span>
+            </label>
+            <small class="text-secondary d-block mb-2">Identify the root cause of the vehicle fault and explain what repair operations are required.</small>
+            <textarea class="form-control" id="inspection_diagnosis" name="inspection_diagnosis" rows="3" required
+                      placeholder="e.g. Front ceramic brake pad worn down to 1.5mm metal backing plate, causing rotor scoring. Spark plug on cylinder 2 fouled with oil deposits; cylinder 2 ignition coil resistance out of factory spec...">{{ job.inspection_diagnosis or '' }}</textarea>
+          </div>
+
+          <!-- Section 3: Diagnostic Notes & Photo Documentation -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-7">
+              <label class="form-label fw-bold text-dark" for="inspection_notes">
+                3. Workshop Notes & Special Handling Instructions
+              </label>
+              <textarea class="form-control" id="inspection_notes" name="inspection_notes" rows="3"
+                        placeholder="e.g. Requires hoist lift and hydraulic spring compressor. Customer requested old replaced parts back for inspection...">{{ job.inspection_notes or job.technician_notes or '' }}</textarea>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-bold text-dark" for="inspection_photo_file">
+                4. Inspection Photo (Optional)
+              </label>
+              <input type="file" class="form-control mb-2" id="inspection_photo_file" name="inspection_photo_file" accept="image/*">
+              <input type="url" class="form-control form-control-sm" id="inspection_photos" name="inspection_photos" 
+                     placeholder="Or paste external image URL..." value="{{ job.inspection_photos or '' }}">
+              <small class="text-muted" style="font-size: 0.72rem;">Attach a photo of worn parts, leak areas, or OBD scan codes.</small>
+            </div>
+          </div>
+
+          <!-- Section 4: Spare Parts Needed Requisition Table -->
+          <div class="card border rounded-4 mb-4 p-4 bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div>
+                <h5 class="fw-bold text-dark m-0">
+                  <i class="fa-solid fa-boxes-packing text-primary me-2"></i>5. Required Spare Parts & Consumables
+                </h5>
+                <small class="text-secondary">Itemize all components needed. On submission, requests are automatically routed to the Spare Parts Department.</small>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 shadow-xs" id="addPartRowBtn">
+                <i class="fa-solid fa-plus me-1"></i> Add Part Row
+              </button>
+            </div>
+
+            <!-- Datalist for catalog parts -->
+            <datalist id="catalogPartsList">
+              {% for cp in catalog_parts %}
+                <option value="{{ cp.part_name }}" data-num="{{ cp.part_number }}" data-stock="{{ cp.quantity }}">
+                  {{ cp.part_number }} &bull; In Stock: {{ cp.quantity }} (Location: {{ cp.shelf_location or 'Bin' }})
+                </option>
+              {% endfor %}
+            </datalist>
+
+            <div class="table-responsive">
+              <table class="table table-bordered bg-white rounded-3 shadow-xs" id="partsRequisitionTable">
+                <thead class="table-light">
+                  <tr class="small text-secondary">
+                    <th style="min-width: 220px;">Part Name <span class="text-danger">*</span></th>
+                    <th style="width: 140px;">Part Number</th>
+                    <th style="width: 100px;">Quantity</th>
+                    <th style="width: 130px;">Urgency</th>
+                    <th style="min-width: 200px;">Reason / Notes</th>
+                    <th style="width: 50px;" class="text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="partsTableBody">
+                  <!-- Row 1 Default -->
+                  <tr class="part-row">
+                    <td>
+                      <input type="text" name="part_name[]" class="form-control form-control-sm part-name-input" list="catalogPartsList" placeholder="Search catalog or type part name...">
+                    </td>
+                    <td>
+                      <input type="text" name="part_number[]" class="form-control form-control-sm part-number-input" placeholder="e.g. SP-BRK-001">
+                    </td>
+                    <td>
+                      <input type="number" name="quantity[]" class="form-control form-control-sm text-center" value="1" min="1">
+                    </td>
+                    <td>
+                      <select name="urgency[]" class="form-select form-select-sm">
+                        <option value="Standard" selected>Standard</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" name="part_notes[]" class="form-control form-control-sm" placeholder="Reason for replacement...">
+                    </td>
+                    <td class="text-center align-middle">
+                      <button type="button" class="btn btn-xs btn-outline-danger remove-part-row" title="Remove" style="padding: 2px 6px;">
+                        <i class="fa-solid fa-trash-can"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <small class="text-muted">
+              <i class="fa-solid fa-circle-info text-primary me-1"></i> If no spare parts are required for this repair, leave the table blank or remove empty rows.
+            </small>
+          </div>
+
+          <!-- Notification & Next Step Notice -->
+          <div class="alert alert-info border-0 rounded-4 p-3 small mb-4">
+            <i class="fa-solid fa-paper-plane text-primary me-1"></i>
+            <strong>Workflow Handoff:</strong> Submitting this inspection will record diagnostic findings and dispatch any requested parts to the <strong>Spare Parts Department</strong>. You and the Admin will be notified once availability and supplier ETAs are confirmed.
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top flex-wrap gap-2">
+            <a href="{{ url_for('tech_job_detail', job_id=job.id) }}" class="btn btn-light rounded-pill px-4">
+              <i class="fa-solid fa-arrow-left me-1"></i> Back to Workbench
+            </a>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+              <i class="fa-solid fa-check me-1"></i> Submit Inspection & Dispatch Parts Requisition
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tableBody = document.getElementById('partsTableBody');
+  const addBtn = document.getElementById('addPartRowBtn');
+
+  // Add row
+  addBtn.addEventListener('click', function() {
+    const tr = document.createElement('tr');
+    tr.className = 'part-row';
+    tr.innerHTML = `
+      <td>
+        <input type="text" name="part_name[]" class="form-control form-control-sm part-name-input" list="catalogPartsList" placeholder="Search catalog or type part name...">
+      </td>
+      <td>
+        <input type="text" name="part_number[]" class="form-control form-control-sm part-number-input" placeholder="e.g. SP-BRK-001">
+      </td>
+      <td>
+        <input type="number" name="quantity[]" class="form-control form-control-sm text-center" value="1" min="1">
+      </td>
+      <td>
+        <select name="urgency[]" class="form-select form-select-sm">
+          <option value="Standard" selected>Standard</option>
+          <option value="Urgent">Urgent</option>
+          <option value="Critical">Critical</option>
+        </select>
+      </td>
+      <td>
+        <input type="text" name="part_notes[]" class="form-control form-control-sm" placeholder="Reason for replacement...">
+      </td>
+      <td class="text-center align-middle">
+        <button type="button" class="btn btn-xs btn-outline-danger remove-part-row" title="Remove" style="padding: 2px 6px;">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  // Remove row
+  tableBody.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-part-row')) {
+      const row = e.target.closest('tr');
+      if (tableBody.querySelectorAll('tr').length > 1) {
+        row.remove();
+      } else {
+        // Clear inputs in single row
+        row.querySelectorAll('input').forEach(i => i.value = '');
+      }
+    }
+  });
+
+  // Auto-fill part number when catalog item selected
+  tableBody.addEventListener('input', function(e) {
+    if (e.target.classList.contains('part-name-input')) {
+      const val = e.target.value;
+      const opts = document.querySelectorAll('#catalogPartsList option');
+      opts.forEach(opt => {
+        if (opt.value === val) {
+          const row = e.target.closest('tr');
+          const pnumInput = row.querySelector('.part-number-input');
+          if (pnumInput && opt.dataset.num) {
+            pnumInput.value = opt.dataset.num;
+          }
+        }
+      });
+    }
+  });
+});
+</script>
+{% endblock %}
+

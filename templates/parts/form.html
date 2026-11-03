@@ -105,12 +105,23 @@
                          value="{{ part.min_quantity if part else 5 }}" min="1" required>
                   <small class="text-muted" style="font-size: 0.72rem;">Triggers low stock reorder warning</small>
                 </div>
+                <div class="col-sm-12">
+                  <label class="form-label small fw-semibold text-dark" for="part-status">
+                    Availability Status <span class="text-danger">*</span>
+                  </label>
+                  <select id="part-status" name="status" class="form-select fw-semibold">
+                    <option value="In Stock" {% if not part or part.status == 'In Stock' %}selected{% endif %}>🟢 Available (In Stock)</option>
+                    <option value="Low Stock" {% if part and part.status == 'Low Stock' %}selected{% endif %}>🟡 Low Stock Alert</option>
+                    <option value="Out of Stock" {% if part and part.status == 'Out of Stock' %}selected{% endif %}>🔴 Out of Stock / Unavailable</option>
+                  </select>
+                  <small class="text-muted" style="font-size: 0.72rem;">Warehouse availability state for technician allocations and repair work orders</small>
+                </div>
               </div>
             </div>
 
-            <!-- Pricing -->
+            <!-- Pricing & Taxation -->
             <div class="row g-3 mb-3">
-              <div class="col-sm-6">
+              <div class="col-sm-4">
                 <label class="form-label small fw-semibold text-secondary" for="unit-price">
                   Billed Selling Unit Price (₹) <span class="text-danger">*</span>
                 </label>
@@ -119,10 +130,22 @@
                   <input type="number" step="0.01" id="unit-price" name="unit_price" class="form-control text-end fw-bold" 
                          placeholder="0.00" value="{{ part.unit_price if part else '0.00' }}" required>
                 </div>
-                <small class="text-muted" style="font-size: 0.72rem;">Price charged on work orders & tax invoices</small>
+                <small class="text-muted" style="font-size: 0.72rem;">Standard catalog price charged on repair bills</small>
               </div>
 
-              <div class="col-sm-6">
+              <div class="col-sm-4">
+                <label class="form-label small fw-semibold text-secondary" for="tax-rate">
+                  Applicable GST / Tax Rate (%)
+                </label>
+                <div class="input-group">
+                  <input type="number" step="0.01" min="0" max="100" id="tax-rate" name="tax_rate" class="form-control text-end fw-semibold" 
+                         placeholder="18.00" value="{{ part.tax_rate if part and part.tax_rate is defined else '18.00' }}">
+                  <span class="input-group-text bg-light fw-bold">%</span>
+                </div>
+                <small class="text-muted" style="font-size: 0.72rem;">Predefined standard GST tax percentage</small>
+              </div>
+
+              <div class="col-sm-4">
                 <label class="form-label small fw-semibold text-secondary" for="cost-price">
                   Procurement Cost Price (₹)
                 </label>

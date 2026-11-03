@@ -15,11 +15,6 @@
       <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill small">
         <i class="fa-solid fa-circle-dot me-1"></i> Live XAMPP MySQL
       </span>
-      <form action="{{ url_for('reminders_scan') }}" method="POST" class="m-0">
-        <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
-          <i class="fa-solid fa-arrows-rotate me-1"></i> Sync & Queue Reminders
-        </button>
-      </form>
       <a href="{{ url_for('service_create') }}" class="btn btn-fs-primary btn-sm rounded-pill px-3 shadow-sm">
         <i class="fa-solid fa-plus me-1"></i> New Work Order
       </a>

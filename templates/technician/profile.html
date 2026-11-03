@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Profile & Status - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill small">
+          <i class="fa-solid fa-id-card-clip me-1"></i> Staff Identity
+        </span>
+        <h3 class="fw-bold text-dark m-0">Technician Profile & Work Status</h3>
+      </div>
+      <p class="text-secondary small m-0">Manage your specialization, technical skillsets, duty availability, and security credentials</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('tech_dashboard') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-gauge-high me-1"></i> Dashboard
+      </a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Sign Out
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Profile Card & Performance Summary -->
+    <div class="col-lg-4" data-aos="fade-up">
+
+      <!-- Profile Overview Card -->
+      <div class="card fs-card mb-4 text-center p-4 shadow-sm">
+        <div class="position-relative d-inline-block mx-auto mb-3">
+          <img src="{{ user.avatar or 'https://api.dicebear.com/7.x/initials/svg?seed=' + user.name }}" 
+               alt="{{ user.name }}" class="rounded-circle border border-3 border-primary shadow-sm" width="96" height="96">
+          <span class="position-absolute bottom-0 end-0 p-2 rounded-circle border border-2 border-white 
+            {% if user.availability_status == 'Available' %}bg-success
+            {% elif user.availability_status == 'Busy' %}bg-warning
+            {% else %}bg-secondary{% endif %}" title="Duty Status: {{ user.availability_status }}">
+          </span>
+        </div>
+
+        <h4 class="fw-bold text-dark m-0">{{ user.name }}</h4>
+        <span class="badge bg-light text-primary border font-monospace px-2 py-1 my-2">
+          {{ user.technician_code or 'TECH-' ~ user.id }}
+        </span>
+        <p class="text-secondary small mb-3">
+          {{ user.specialization or 'Automotive & Heavy Fleet Diagnostics Specialist' }}
+        </p>
+
+        <!-- Current Status Pill -->
+        <div class="mb-4">
+          {% if user.availability_status == 'Available' %}
+            <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fs-6">
+              <i class="fa-solid fa-circle-check me-1"></i> Available on Duty
+            </span>
+          {% elif user.availability_status == 'Busy' %}
+            <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 px-3 py-2 rounded-pill fs-6">
+              <i class="fa-solid fa-person-digging me-1"></i> Busy on Work Order
+            </span>
+          {% else %}
+            <span class="badge bg-secondary bg-opacity-25 text-dark border border-secondary px-3 py-2 rounded-pill fs-6">
+              <i class="fa-solid fa-clock me-1"></i> {{ user.availability_status }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Contact Quick List -->
+        <ul class="list-group list-group-flush text-start small mb-3">
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+            <span class="text-secondary">Role</span>
+            <span class="fw-semibold text-dark">{{ user.role }}</span>
+          </li>
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+            <span class="text-secondary">Email</span>
+            <span class="fw-semibold text-primary">{{ user.email }}</span>
+          </li>
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+            <span class="text-secondary">Phone</span>
+            <span class="fw-semibold text-dark">{{ user.phone or 'Not set' }}</span>
+          </li>
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+            <span class="text-secondary">Account Status</span>
+            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">{{ user.status }}</span>
+          </li>
+        </ul>
+
+      </div>
+
+      <!-- Performance Metrics Card -->
+      <div class="card fs-card shadow-sm p-4">
+        <h6 class="fw-bold text-dark mb-3">
+          <i class="fa-solid fa-chart-pie text-primary me-1"></i> Technician Performance Metrics
+        </h6>
+
+        <div class="row g-2 text-center">
+          <div class="col-6">
+            <div class="p-3 bg-light rounded-3">
+              <span class="text-secondary small d-block">TOTAL ASSIGNED</span>
+              <h4 class="fw-bold text-dark m-0">{{ stats.total_assigned }}</h4>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 bg-light rounded-3">
+              <span class="text-secondary small d-block">COMPLETED</span>
+              <h4 class="fw-bold text-success m-0">{{ stats.completed }}</h4>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 bg-light rounded-3">
+              <span class="text-secondary small d-block">IN PROGRESS</span>
+              <h4 class="fw-bold text-info m-0">{{ stats.in_progress }}</h4>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 bg-light rounded-3">
+              <span class="text-secondary small d-block">COMPLETION RATE</span>
+              <h4 class="fw-bold text-primary m-0">
+                {% if stats.total_assigned > 0 %}
+                  {{ ((stats.completed / stats.total_assigned) * 100)|round|int }}%
+                {% else %}
+                  100%
+                {% endif %}
+              </h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Edit Profile & Change Password -->
+    <div class="col-lg-8" data-aos="fade-up" data-aos-delay="100">
+
+      <!-- Form 1: Profile Details & Duty Status -->
+      <div class="card fs-card mb-4 shadow-sm p-4 p-md-5">
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Technician Profile & Availability Status</h5>
+            <small class="text-secondary">Update personal information, duty availability, and technical skills</small>
+          </div>
+          <span class="brand-icon-box bg-primary text-white" style="width: 40px; height: 40px;">
+            <i class="fa-solid fa-user-pen"></i>
+          </span>
+        </div>
+
+        <form action="{{ url_for('tech_profile') }}" method="POST">
+          <input type="hidden" name="form_type" value="update_profile">
+
+          <div class="row g-3">
+            <!-- Full Name -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary" for="prof-name">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="prof-name" name="name" value="{{ user.name }}" required>
+            </div>
+
+            <!-- Email (Read only) -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary" for="prof-email">Email Address</label>
+              <input type="email" class="form-control bg-light" id="prof-email" value="{{ user.email }}" readonly>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary" for="prof-phone">Phone Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="prof-phone" name="phone" value="{{ user.phone or '' }}" placeholder="+91 98201 00000" required>
+            </div>
+
+            <!-- Availability Status Dropdown -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary" for="prof-status">
+                Duty Availability Status <span class="text-danger">*</span>
+              </label>
+              <select class="form-select fw-semibold" id="prof-status" name="availability_status" required>
+                <option value="Available" {% if user.availability_status == 'Available' %}selected{% endif %}>
+                  🟢 Available (Ready for new job assignments)
+                </option>
+                <option value="Busy" {% if user.availability_status == 'Busy' %}selected{% endif %}>
+                  🟡 Busy (Currently working on active work order)
+                </option>
+                <option value="On Leave" {% if user.availability_status == 'On Leave' %}selected{% endif %}>
+                  ⚪ On Leave / Off Duty
+                </option>
+              </select>
+            </div>
+
+            <!-- Specialization -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary" for="prof-spec">Primary Specialization / Discipline</label>
+              <input type="text" class="form-control" id="prof-spec" name="specialization" 
+                     value="{{ user.specialization or '' }}" 
+                     placeholder="e.g. Commercial Fleet Diesel Systems / Hybrid Powertrains / Auto-Electrical & CAN Bus">
+            </div>
+
+            <!-- Technical Skills -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary" for="prof-skills">Technical Skills & Certifications</label>
+              <textarea class="form-control" id="prof-skills" name="skills" rows="3" 
+                        placeholder="e.g. Electronic Brake Actuators, Bosch Scanner Diagnostics, Transmission Overhaul, Wheel Alignment, Air Conditioning...">{{ user.skills or '' }}</textarea>
+              <small class="text-muted">Separate multiple skillsets with commas for workshop dispatcher reference.</small>
+            </div>
+          </div>
+
+          <div class="pt-4 border-top mt-4 text-end">
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile Details
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Form 2: Change Password -->
+      <div class="card fs-card shadow-sm p-4 p-md-5">
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Security Credentials</h5>
+            <small class="text-secondary">Update account login password</small>
+          </div>
+          <span class="brand-icon-box bg-secondary text-white" style="width: 40px; height: 40px;">
+            <i class="fa-solid fa-lock"></i>
+          </span>
+        </div>
+
+        <form action="{{ url_for('tech_profile') }}" method="POST">
+          <input type="hidden" name="form_type" value="change_password">
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold text-secondary" for="pwd-curr">Current Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" id="pwd-curr" name="current_password" required autocomplete="current-password">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold text-secondary" for="pwd-new">New Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" id="pwd-new" name="new_password" minlength="6" required autocomplete="new-password">
+              <small class="text-muted" style="font-size: 0.72rem;">Min 6 characters.</small>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold text-secondary" for="pwd-conf">Confirm New Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" id="pwd-conf" name="confirm_password" minlength="6" required autocomplete="new-password">
+            </div>
+          </div>
+
+          <div class="pt-4 border-top mt-4 text-end">
+            <button type="submit" class="btn btn-outline-primary rounded-pill px-4 fw-semibold">
+              <i class="fa-solid fa-key me-1"></i> Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

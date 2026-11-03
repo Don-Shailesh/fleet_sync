@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing & Labor Audit Trail - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb & Top Bar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('admin_labor_rates') }}" class="text-decoration-none">Labor Rates & Pricing</a></li>
+          <li class="breadcrumb-item active fw-bold">Audit Trail</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold text-dark m-0 mt-1">Pricing & Labor Standards Audit Trail</h3>
+      <p class="text-secondary small m-0">Immutable, timestamped record of all modifications to spare parts price lists, labor rates, and work order bill adjustments.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('parts_inventory') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-boxes-stacked me-1"></i> Parts Catalog
+      </a>
+      <a href="{{ url_for('admin_labor_rates') }}" class="btn btn-primary rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-calculator me-1"></i> Labor Standards
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card fs-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('admin_pricing_audit_logs') }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-muted">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input type="text" name="search" class="form-control border-start-0 ps-0" 
+                 placeholder="Search by component, service, user or notes..." value="{{ search or '' }}">
+        </div>
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <select name="item_type" class="form-select">
+          <option value="">All Adjustment Types</option>
+          <option value="Spare Part" {% if item_type_filter == 'Spare Part' %}selected{% endif %}>Spare Parts Catalog</option>
+          <option value="Labor Rate" {% if item_type_filter == 'Labor Rate' %}selected{% endif %}>Labor Rate Standards</option>
+          <option value="Service Bill Item" {% if item_type_filter == 'Service Bill Item' %}selected{% endif %}>Bill Item Corrections</option>
+          <option value="Bill Discount" {% if item_type_filter == 'Bill Discount' %}selected{% endif %}>Bill Discounts</option>
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary rounded-pill flex-fill">
+          <i class="fa-solid fa-filter me-1"></i> Filter
+        </button>
+        {% if search or item_type_filter %}
+        <a href="{{ url_for('admin_pricing_audit_logs') }}" class="btn btn-light border rounded-pill" title="Clear Filters">
+          <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Audit Table -->
+  <div class="card fs-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 17%;">Timestamp</th>
+            <th style="width: 14%;">Category</th>
+            <th style="width: 22%;">Target Item / Work Order</th>
+            <th style="width: 18%;">Action Performed</th>
+            <th style="width: 15%;">Old &rarr; New Value</th>
+            <th style="width: 14%;">Authorized Staff</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="small font-monospace text-secondary">
+              <i class="fa-solid fa-clock me-1 text-muted"></i>{{ log.created_at | format_datetime }}
+            </td>
+            <td>
+              {% if log.item_type == 'Spare Part' %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-gear me-1"></i> Spare Part
+                </span>
+              {% elif log.item_type == 'Labor Rate' %}
+                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-calculator me-1"></i> Labor Rate
+                </span>
+              {% elif log.item_type == 'Bill Discount' %}
+                <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-tag me-1"></i> Discount
+                </span>
+              {% else %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-file-invoice me-1"></i> Bill Item
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <strong class="text-dark d-block">{{ log.item_name }}</strong>
+              {% if log.notes %}
+                <small class="text-muted d-block text-truncate" style="max-width: 280px;" title="{{ log.notes }}">
+                  <em>"{{ log.notes }}"</em>
+                </small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="fw-semibold text-dark small">{{ log.action }}</span>
+            </td>
+            <td>
+              <div class="small font-monospace">
+                {% if log.old_value %}
+                  <span class="text-decoration-line-through text-muted">{{ log.old_value }}</span>
+                  <i class="fa-solid fa-arrow-right mx-1 text-primary small"></i>
+                {% endif %}
+                <strong class="text-success">{{ log.new_value }}</strong>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-1">
+                <i class="fa-solid fa-user-shield text-secondary small"></i>
+                <span class="small fw-bold text-dark">{{ log.changed_by_name or 'System' }}</span>
+              </div>
+              <span class="badge bg-light text-secondary border rounded-pill" style="font-size: 0.68rem;">{{ log.changed_by_role or 'Admin' }}</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-secondary">
+              <i class="fa-solid fa-clock-rotate-left fa-3x text-muted opacity-50 mb-3 d-block"></i>
+              <h6 class="fw-bold text-dark">No price change logs found</h6>
+              <p class="small text-muted mb-0">All future adjustments to catalog prices, labor rates, and bill items will be logged here with complete accountability.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

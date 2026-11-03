@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}Labor Rate Standards & Pricing Catalog - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb & Top Bar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item active fw-bold">Labor Rates & Pricing</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold text-dark m-0 mt-1">Labor Rate Standards & Service Pricing</h3>
+      <p class="text-secondary small m-0">Configure standard hourly rates and fixed-price service packages applied automatically to technician repair bills.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('admin_pricing_audit_logs') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-clock-rotate-left me-1"></i> Pricing Audit Trail
+      </a>
+      <button type="button" class="btn btn-fs-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#addLaborRateModal">
+        <i class="fa-solid fa-plus me-1"></i> Add Labor Rate
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Overview Metrics -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-primary">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Total Standard Rates</span>
+            <h3 class="fw-bold text-dark m-0 mt-1">{{ total_rates }}</h3>
+            <span class="text-muted small">Configured services</span>
+          </div>
+          <span class="brand-icon-box bg-primary bg-opacity-10 text-primary">
+            <i class="fa-solid fa-calculator fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-success">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Active Standards</span>
+            <h3 class="fw-bold text-dark m-0 mt-1">{{ active_rates_count }}</h3>
+            <span class="text-muted small">Available for work orders</span>
+          </div>
+          <span class="brand-icon-box bg-success bg-opacity-10 text-success">
+            <i class="fa-solid fa-circle-check fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-info">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Hourly Rate Services</span>
+            <h3 class="fw-bold text-dark m-0 mt-1">{{ hourly_rates_count }}</h3>
+            <span class="text-muted small">Billed by time in bay</span>
+          </div>
+          <span class="brand-icon-box bg-info bg-opacity-10 text-info">
+            <i class="fa-solid fa-stopwatch fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-warning">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Fixed Price Packages</span>
+            <h3 class="fw-bold text-dark m-0 mt-1">{{ fixed_rates_count }}</h3>
+            <span class="text-muted small">Flat-rate job packages</span>
+          </div>
+          <span class="brand-icon-box bg-warning bg-opacity-10 text-warning">
+            <i class="fa-solid fa-tags fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card fs-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('admin_labor_rates') }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-muted">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input type="text" name="search" class="form-control border-start-0 ps-0" 
+                 placeholder="Search by service type or description..." value="{{ search or '' }}">
+        </div>
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <select name="charge_type" class="form-select">
+          <option value="">All Charge Types</option>
+          <option value="Hourly" {% if charge_type_filter == 'Hourly' %}selected{% endif %}>Hourly Rate</option>
+          <option value="Fixed" {% if charge_type_filter == 'Fixed' %}selected{% endif %}>Fixed Price</option>
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-2">
+        <select name="status" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+          <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary rounded-pill flex-fill">
+          <i class="fa-solid fa-filter me-1"></i> Filter
+        </button>
+        {% if search or charge_type_filter or status_filter %}
+        <a href="{{ url_for('admin_labor_rates') }}" class="btn btn-light border rounded-pill" title="Clear Filters">
+          <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Rates Catalog Table -->
+  <div class="card fs-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 28%;">Service Category / Description</th>
+            <th style="width: 15%;">Charge Mode</th>
+            <th style="width: 15%;" class="text-end">Standard Rate</th>
+            <th style="width: 12%;" class="text-center">Guide Hours</th>
+            <th style="width: 10%;" class="text-center">GST Tax Rate</th>
+            <th style="width: 10%;" class="text-center">Status</th>
+            <th style="width: 10%;" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rates %}
+          <tr>
+            <td>
+              <strong class="text-dark d-block">{{ r.service_type }}</strong>
+              {% if r.description %}
+                <small class="text-secondary d-block text-truncate" style="max-width: 320px;">{{ r.description }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.charge_type == 'Hourly' %}
+                <span class="badge bg-info bg-opacity-15 text-info border border-info border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-stopwatch me-1"></i> Hourly Rate
+                </span>
+              {% else %}
+                <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-tag me-1"></i> Fixed Flat Price
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold font-monospace fs-6">
+              {% if r.charge_type == 'Hourly' %}
+                <span class="text-primary">{{ r.hourly_rate | currency }} / hr</span>
+              {% else %}
+                <span class="text-success">{{ r.fixed_price | currency }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center font-monospace small">
+              {{ r.standard_hours }} hrs
+            </td>
+            <td class="text-center font-monospace fw-semibold text-secondary">
+              {{ r.tax_rate }}%
+            </td>
+            <td class="text-center">
+              {% if r.status == 'Active' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-circle-check me-1"></i> Active
+                </span>
+              {% else %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-2 py-1">
+                  Inactive
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="dropdown">
+                <button class="btn btn-sm btn-light border rounded-pill px-2" type="button" data-bs-toggle="dropdown">
+                  <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                  <li>
+                    <button class="dropdown-item small" type="button" data-bs-toggle="modal" data-bs-target="#editLaborRateModal{{ r.id }}">
+                      <i class="fa-solid fa-pen text-primary me-2"></i> Edit Rate & Tax
+                    </button>
+                  </li>
+                  <li>
+                    <form action="{{ url_for('admin_labor_rate_toggle', rate_id=r.id) }}" method="POST" class="m-0">
+                      <button type="submit" class="dropdown-item small">
+                        {% if r.status == 'Active' %}
+                          <i class="fa-solid fa-ban text-warning me-2"></i> Deactivate
+                        {% else %}
+                          <i class="fa-solid fa-circle-check text-success me-2"></i> Activate
+                        {% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form action="{{ url_for('admin_labor_rate_delete', rate_id=r.id) }}" method="POST" class="m-0" 
+                          onsubmit="return confirm('Are you sure you want to delete or deactivate this labor standard?');">
+                      <button type="submit" class="dropdown-item small text-danger">
+                        <i class="fa-solid fa-trash me-2"></i> Delete Standard
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Edit Modal for {{ r.id }} -->
+          <div class="modal fade" id="editLaborRateModal{{ r.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content rounded-4 border-0 shadow">
+                <form action="{{ url_for('admin_labor_rate_edit', rate_id=r.id) }}" method="POST">
+                  <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                      <i class="fa-solid fa-pen-to-square text-primary me-2"></i> Edit Labor Standard
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold text-dark">Service Category / Name <span class="text-danger">*</span></label>
+                      <input type="text" name="service_type" class="form-control" value="{{ r.service_type }}" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                      <div class="col-sm-6">
+                        <label class="form-label small fw-bold text-dark">Charge Mode <span class="text-danger">*</span></label>
+                        <select name="charge_type" class="form-select" id="chargeTypeSelect{{ r.id }}" onchange="toggleRateInputs({{ r.id }})">
+                          <option value="Hourly" {% if r.charge_type == 'Hourly' %}selected{% endif %}>Hourly Rate (₹/hr)</option>
+                          <option value="Fixed" {% if r.charge_type == 'Fixed' %}selected{% endif %}>Fixed Flat Price (₹)</option>
+                        </select>
+                      </div>
+                      <div class="col-sm-6">
+                        <label class="form-label small fw-bold text-dark">Guide / Standard Hours</label>
+                        <div class="input-group">
+                          <input type="number" step="0.25" min="0.25" name="standard_hours" class="form-control" value="{{ r.standard_hours }}">
+                          <span class="input-group-text">hrs</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                      <div class="col-sm-6" id="hourlyInputBox{{ r.id }}" style="{% if r.charge_type == 'Fixed' %}display: none;{% endif %}">
+                        <label class="form-label small fw-bold text-primary">Hourly Rate (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light fw-bold">₹</span>
+                          <input type="number" step="0.01" min="0" name="hourly_rate" class="form-control text-end fw-bold" value="{{ r.hourly_rate }}">
+                        </div>
+                      </div>
+                      <div class="col-sm-6" id="fixedInputBox{{ r.id }}" style="{% if r.charge_type == 'Hourly' %}display: none;{% endif %}">
+                        <label class="form-label small fw-bold text-success">Fixed Package Price (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light fw-bold">₹</span>
+                          <input type="number" step="0.01" min="0" name="fixed_price" class="form-control text-end fw-bold" value="{{ r.fixed_price }}">
+                        </div>
+                      </div>
+                      <div class="col-sm-6">
+                        <label class="form-label small fw-bold text-dark">Applicable Tax (GST %)</label>
+                        <div class="input-group">
+                          <input type="number" step="0.01" min="0" max="100" name="tax_rate" class="form-control text-end fw-semibold" value="{{ r.tax_rate }}">
+                          <span class="input-group-text bg-light">%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold text-dark">Service Description</label>
+                      <textarea name="description" class="form-control" rows="2">{{ r.description or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold text-dark">Status</label>
+                      <select name="status" class="form-select">
+                        <option value="Active" {% if r.status == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="Inactive" {% if r.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                      </select>
+                    </div>
+
+                    <div class="alert alert-light border small text-muted mb-0">
+                      <i class="fa-solid fa-shield-halved me-1 text-primary"></i>
+                      <strong>Audit Trail Notice:</strong> Modifying standard rates will automatically be recorded in the Pricing Audit Trail with your administrative signature.
+                    </div>
+                  </div>
+                  <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Save Changes</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-secondary">
+              <i class="fa-solid fa-calculator fa-3x text-muted opacity-50 mb-3 d-block"></i>
+              <h6 class="fw-bold text-dark">No labor rate standards found</h6>
+              <p class="small text-muted mb-3">Add standard hourly rates and fixed packages to enable automatic repair bill generation.</p>
+              <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addLaborRateModal">
+                <i class="fa-solid fa-plus me-1"></i> Add Labor Rate
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: Add New Labor Rate -->
+<div class="modal fade" id="addLaborRateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form action="{{ url_for('admin_labor_rate_add') }}" method="POST">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-plus text-primary me-2"></i> Add New Labor Rate Standard
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Service Category / Operation Name <span class="text-danger">*</span></label>
+            <input type="text" name="service_type" class="form-control" placeholder="e.g. Brake Caliper & Pad Overhaul" required>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold text-dark">Charge Mode <span class="text-danger">*</span></label>
+              <select name="charge_type" class="form-select" id="newChargeTypeSelect" onchange="toggleNewRateInputs()">
+                <option value="Hourly" selected>Hourly Rate (₹/hr)</option>
+                <option value="Fixed">Fixed Flat Price (₹)</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold text-dark">Guide / Standard Hours</label>
+              <div class="input-group">
+                <input type="number" step="0.25" min="0.25" name="standard_hours" class="form-control" value="1.5">
+                <span class="input-group-text">hrs</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6" id="newHourlyInputBox">
+              <label class="form-label small fw-bold text-primary">Hourly Rate (₹) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light fw-bold">₹</span>
+                <input type="number" step="0.01" min="0" name="hourly_rate" class="form-control text-end fw-bold" placeholder="850.00" value="850.00">
+              </div>
+            </div>
+            <div class="col-sm-6" id="newFixedInputBox" style="display: none;">
+              <label class="form-label small fw-bold text-success">Fixed Package Price (₹) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light fw-bold">₹</span>
+                <input type="number" step="0.01" min="0" name="fixed_price" class="form-control text-end fw-bold" placeholder="1500.00" value="1500.00">
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold text-dark">Applicable Tax (GST %)</label>
+              <div class="input-group">
+                <input type="number" step="0.01" min="0" max="100" name="tax_rate" class="form-control text-end fw-semibold" value="18.00">
+                <span class="input-group-text bg-light">%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Service Description</label>
+            <textarea name="description" class="form-control" rows="2" placeholder="Brief technical scope or inclusions..."></textarea>
+          </div>
+
+          <div class="alert alert-light border small text-muted mb-0">
+            <i class="fa-solid fa-circle-info me-1 text-primary"></i>
+            Technicians will select this service category when completing repairs to automatically calculate labor billings.
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Create Labor Standard</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleNewRateInputs() {
+  const sel = document.getElementById('newChargeTypeSelect').value;
+  const hBox = document.getElementById('newHourlyInputBox');
+  const fBox = document.getElementById('newFixedInputBox');
+  if (sel === 'Fixed') {
+    hBox.style.display = 'none';
+    fBox.style.display = 'block';
+  } else {
+    hBox.style.display = 'block';
+    fBox.style.display = 'none';
+  }
+}
+
+function toggleRateInputs(id) {
+  const sel = document.getElementById('chargeTypeSelect' + id).value;
+  const hBox = document.getElementById('hourlyInputBox' + id);
+  const fBox = document.getElementById('fixedInputBox' + id);
+  if (sel === 'Fixed') {
+    hBox.style.display = 'none';
+    fBox.style.display = 'block';
+  } else {
+    hBox.style.display = 'block';
+    fBox.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}
+

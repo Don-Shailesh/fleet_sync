@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{% if technician %}Edit Technician: {{ technician.name }}{% else %}Register New Technician{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_technicians') }}" class="text-decoration-none">Technicians Management</a></li>
+        <li class="breadcrumb-item active fw-bold">{% if technician %}Edit {{ technician.name }}{% else %}New Technician{% endif %}</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+      <div class="card fs-card shadow-sm p-4 p-md-5" data-aos="fade-up">
+
+        <!-- Form Header -->
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom flex-wrap gap-2">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill small">
+                <i class="fa-solid fa-users-gear me-1"></i> Technician Access & Roster
+              </span>
+              {% if technician and technician.technician_code %}
+                <span class="badge bg-light text-primary border font-monospace">{{ technician.technician_code }}</span>
+              {% endif %}
+            </div>
+            <h4 class="fw-bold text-dark m-0">{% if technician %}Edit Technician Profile & Credentials{% else %}Register New Certified Technician{% endif %}</h4>
+            <small class="text-secondary">Provide profile information, mobile contact, workshop specialization, and login credentials.</small>
+          </div>
+          <span class="brand-icon-box bg-primary text-white" style="width: 48px; height: 48px; font-size: 1.3rem;">
+            <i class="fa-solid {% if technician %}fa-user-pen{% else %}fa-user-plus{% endif %}"></i>
+          </span>
+        </div>
+
+        <form method="POST" action="{% if technician %}{{ url_for('admin_technician_edit', tech_id=technician.id) }}{% else %}{{ url_for('admin_technician_create') }}{% endif %}">
+          
+          <!-- Section 1: Basic Identity & Contact -->
+          <h6 class="fw-bold text-dark text-uppercase small mb-3 text-muted">1. Basic Identity & Contact Information</h6>
+          <div class="row g-3 mb-4">
+            <!-- Full Name -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Full Legal Name <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-user"></i></span>
+                <input type="text" name="name" class="form-control" placeholder="e.g. Rajesh Kumar" value="{{ technician.name if technician else '' }}" required>
+              </div>
+            </div>
+
+            <!-- Technician Code -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Technician Employee ID / Code <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted font-monospace"><i class="fa-solid fa-id-badge"></i></span>
+                <input type="text" name="technician_code" class="form-control font-monospace text-uppercase" placeholder="e.g. TECH-103" value="{{ technician.technician_code if technician else suggested_code }}" required>
+              </div>
+              <small class="text-muted" style="font-size: 0.75rem;">Unique alphanumeric identifier across service workshops</small>
+            </div>
+
+            <!-- Mobile Phone -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Mobile Contact Number <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-phone"></i></span>
+                <input type="tel" name="phone" class="form-control" placeholder="e.g. +91 98765 43210" value="{{ technician.phone if technician else '' }}" required>
+              </div>
+              <small class="text-muted" style="font-size: 0.75rem;">Used for SMS/WhatsApp customer dispatches & duplicate validation</small>
+            </div>
+
+            <!-- Email (Login Username) -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Email Address (Login Username) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-envelope"></i></span>
+                <input type="email" name="email" class="form-control" placeholder="e.g. rajesh.tech@fleetsync.io" value="{{ technician.email if technician else '' }}" required>
+              </div>
+              <small class="text-muted" style="font-size: 0.75rem;">Must be unique; used to sign in to the Technician Panel</small>
+            </div>
+
+            <!-- Residential / Service Address -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary mb-1">Residential / Base Service Address</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-location-dot"></i></span>
+                <input type="text" name="address" class="form-control" placeholder="e.g. Workshop Bay 4, Industrial Area Phase II, Pune" value="{{ technician.address if technician else '' }}">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Specialization, Skills & Duty Status -->
+          <h6 class="fw-bold text-dark text-uppercase small mb-3 text-muted">2. Professional Competencies & Duty Status</h6>
+          <div class="row g-3 mb-4">
+            <!-- Specialization -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Primary Specialization / Trade</label>
+              <input type="text" name="specialization" class="form-control" placeholder="e.g. Powertrain & Engine Diagnostics, Auto Electrical" value="{{ technician.specialization if technician else '' }}">
+            </div>
+
+            <!-- Initial Availability Status -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Duty Availability Status</label>
+              <select name="availability_status" class="form-select">
+                <option value="Available" {% if not technician or technician.availability_status == 'Available' %}selected{% endif %}>🟢 Available (Ready for new assignments)</option>
+                <option value="Busy" {% if technician and technician.availability_status == 'Busy' %}selected{% endif %}>🟡 Busy (Engaged on ongoing work order)</option>
+                <option value="On Leave" {% if technician and technician.availability_status == 'On Leave' %}selected{% endif %}>⚪ On Leave (Temporary absence)</option>
+              </select>
+            </div>
+
+            <!-- Skills List -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary mb-1">Key Technical Skills & Certifications</label>
+              <input type="text" name="skills" class="form-control" placeholder="e.g. OBD-II Scanners, Hydraulic Brake Lathe, Transmission Overhaul, ECM Flashing" value="{{ technician.skills if technician else '' }}">
+              <small class="text-muted" style="font-size: 0.75rem;">Enter comma-separated competencies; displayed in Admin assignment dropdowns</small>
+            </div>
+
+            {% if technician %}
+            <!-- Account Status (Active/Inactive) -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Login Account Authorization</label>
+              <select name="status" class="form-select">
+                <option value="Active" {% if technician.status == 'Active' %}selected{% endif %}>Active (Allowed to sign in & receive work)</option>
+                <option value="Inactive" {% if technician.status == 'Inactive' %}selected{% endif %}>Inactive / Deactivated (Access revoked)</option>
+              </select>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Section 3: Login Credentials -->
+          <h6 class="fw-bold text-dark text-uppercase small mb-3 text-muted">3. Authentication Credentials</h6>
+          <div class="row g-3 mb-4">
+            {% if technician %}
+              <div class="col-12">
+                <div class="alert alert-info border-0 rounded-3 small p-3 mb-0">
+                  <i class="fa-solid fa-circle-info me-1"></i>
+                  Leave the password fields blank if you do <strong>not</strong> want to alter the technician's existing login password.
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary mb-1">New Password (Optional)</label>
+                <input type="password" name="new_password" class="form-control" placeholder="Enter at least 6 characters" minlength="6">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary mb-1">Confirm New Password</label>
+                <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter new password" minlength="6">
+              </div>
+            {% else %}
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary mb-1">Initial Password <span class="text-danger">*</span></label>
+                <input type="password" name="password" class="form-control" placeholder="Minimum 6 characters" minlength="6" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary mb-1">Confirm Initial Password <span class="text-danger">*</span></label>
+                <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter password" minlength="6" required>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Form Actions -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top flex-wrap gap-2">
+            <a href="{{ url_for('admin_technicians') }}" class="btn btn-light border rounded-pill px-4">
+              <i class="fa-solid fa-arrow-left me-1"></i> Back to Roster
+            </a>
+            <button type="submit" class="btn btn-fs-primary rounded-pill px-5 shadow-sm">
+              <i class="fa-solid {% if technician %}fa-check me-1{% else %}fa-user-plus me-1{% endif %}"></i>
+              {% if technician %}Save Changes{% else %}Register Technician{% endif %}
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

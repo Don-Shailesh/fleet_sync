@@ -70,7 +70,7 @@
           <label class="form-label small fw-semibold text-secondary mb-1" for="filter-status">Request Status</label>
           <select id="filter-status" name="status" class="form-select">
             <option value="All" {% if not status or status == 'All' %}selected{% endif %}>-- All Statuses --</option>
-            {% for s in ['Pending', 'Waiting for Parts', 'Request Sent', 'Part Available', 'Not Available', 'Received by Technician', 'Repair In Progress', 'Completed'] %}
+            {% for s in ['Pending', 'Waiting for Parts', 'Request Sent', 'Approved', 'Part Available', 'Issued', 'Not Available', 'Rejected', 'Received by Technician', 'Used in Service', 'Completed'] %}
               <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
           </select>
@@ -228,29 +228,45 @@
 
             <!-- Status Badge -->
             <td>
-              {% if req.status == 'Part Available' %}
+              {% if req.status == 'Part Available' or req.status == 'Approved' %}
                 <span class="badge bg-success text-white rounded-pill px-2 py-1 shadow-xs animate__animated animate__pulse">
                   <i class="fa-solid fa-circle-check me-1"></i> Part Available
                 </span>
+                {% if req.quantity_available %}<small class="text-success d-block fw-bold font-monospace">Qty: {{ req.quantity_available }}</small>{% endif %}
+              {% elif req.status in ('Unavailable - Ordered', 'Not Available') %}
+                <span class="badge bg-warning text-dark rounded-pill px-2 py-1 shadow-xs">
+                  <i class="fa-solid fa-truck-clock me-1"></i> On Order / ETA
+                </span>
+                {% if req.estimated_delivery_date %}
+                  <small class="text-muted d-block font-monospace"><i class="fa-solid fa-calendar-day me-1"></i>ETA: {{ req.estimated_delivery_date | format_date }}</small>
+                {% endif %}
+              {% elif req.status == 'Clarification Requested' %}
+                <span class="badge bg-info text-dark rounded-pill px-2 py-1 shadow-xs">
+                  <i class="fa-solid fa-circle-question me-1"></i> Clarification Needed
+                </span>
+              {% elif req.status == 'Issued' %}
+                <span class="badge bg-primary text-white rounded-pill px-2 py-1 shadow-xs">
+                  <i class="fa-solid fa-truck-ramp-box me-1"></i> Issued
+                </span>
               {% elif req.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
                 <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 rounded-pill px-2 py-1">
-                  <i class="fa-solid fa-clock me-1"></i> {{ req.status }}
+                  <i class="fa-solid fa-clock me-1"></i> Under Review
                 </span>
-              {% elif req.status == 'Not Available' %}
+              {% elif req.status == 'Rejected' %}
                 <span class="badge bg-danger bg-opacity-15 text-danger rounded-pill px-2 py-1">
-                  <i class="fa-solid fa-ban me-1"></i> Not Available
+                  <i class="fa-solid fa-ban me-1"></i> Rejected
                 </span>
               {% elif req.status == 'Received by Technician' %}
                 <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
                   <i class="fa-solid fa-hand-holding me-1"></i> Received by Tech
                 </span>
-              {% elif req.status == 'Repair In Progress' %}
-                <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1">
-                  <i class="fa-solid fa-wrench me-1"></i> Repair In Progress
+              {% elif req.status == 'Used in Service' %}
+                <span class="badge bg-light text-success border border-success rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-wrench me-1"></i> Used in Service
                 </span>
-              {% elif req.status == 'Completed' %}
-                <span class="badge bg-light text-success border border-success-subtle rounded-pill px-2 py-1">
-                  <i class="fa-solid fa-check-double me-1"></i> Completed
+              {% elif req.status == 'Unused' %}
+                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">
+                  Unused (Returned)
                 </span>
               {% else %}
                 <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">
@@ -280,15 +296,27 @@
                     <i class="fa-solid fa-sliders"></i>
                   </button>
                 </div>
-              {% elif req.status == 'Part Available' %}
+              {% elif req.status in ('Part Available', 'Approved') %}
                 <div class="d-inline-flex gap-1 align-items-center">
-                  <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1">Ready at Counter</span>
+                  <form action="{{ url_for('parts_request_issue', request_id=req.id) }}" method="POST" class="d-inline m-0">
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2 py-1 shadow-xs" title="Officially issue part to technician">
+                      <i class="fa-solid fa-truck-ramp-box me-1"></i> Issue Part
+                    </button>
+                  </form>
                   <button type="button" class="btn btn-xs btn-light border rounded-pill px-2 py-1" 
                           data-bs-toggle="modal" data-bs-target="#updateReqModal{{ req.id }}" title="Modify Details / Notes">
                     <i class="fa-solid fa-pen"></i>
                   </button>
                 </div>
-              {% elif req.status == 'Not Available' %}
+              {% elif req.status == 'Issued' %}
+                <div class="d-inline-flex gap-1 align-items-center">
+                  <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1"><i class="fa-solid fa-check me-1"></i> Issued</span>
+                  <button type="button" class="btn btn-xs btn-light border rounded-pill px-2 py-1" 
+                          data-bs-toggle="modal" data-bs-target="#updateReqModal{{ req.id }}" title="Modify Details">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                </div>
+              {% elif req.status in ('Not Available', 'Rejected') %}
                 <div class="d-inline-flex gap-1 align-items-center">
                   <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1">Not Available</span>
                   <form action="{{ url_for('parts_request_approve', request_id=req.id) }}" method="POST" class="d-inline m-0">
@@ -353,32 +381,53 @@
 
                 <div class="mb-3">
                   <label class="form-label small fw-semibold text-secondary">Fulfillment Status <span class="text-danger">*</span></label>
-                  <select name="status" class="form-select" required>
+                  <select name="status" class="form-select" id="statusSelect{{ req.id }}" required onchange="togglePartsEtaFields({{ req.id }})">
                     <option value="Part Available" {% if req.status == 'Part Available' %}selected{% endif %}>
-                      Part Available (Ready at Parts Counter - Notifies Tech)
+                      Part Available (In Stock - Notifies Tech for collection)
                     </option>
-                    <option value="Not Available" {% if req.status == 'Not Available' %}selected{% endif %}>
-                      Not Available (Out of stock / Backordered - Notifies Tech)
+                    <option value="Unavailable - Ordered" {% if req.status in ('Unavailable - Ordered', 'Not Available') %}selected{% endif %}>
+                      Unavailable - Ordered (Place Supplier Order & Set ETA)
+                    </option>
+                    <option value="Clarification Requested" {% if req.status == 'Clarification Requested' %}selected{% endif %}>
+                      Request Clarification from Technician
+                    </option>
+                    <option value="Rejected" {% if req.status == 'Rejected' %}selected{% endif %}>
+                      Reject Requisition
+                    </option>
+                    <option value="Issued" {% if req.status == 'Issued' %}selected{% endif %}>
+                      Issued at Counter
                     </option>
                     <option value="Pending" {% if req.status == 'Pending' %}selected{% endif %}>
-                      Pending (Processing in Warehouse / Awaiting Shipment)
-                    </option>
-                    <option value="Waiting for Parts" {% if req.status == 'Waiting for Parts' %}selected{% endif %}>
-                      Waiting for Parts
-                    </option>
-                    <option value="Received by Technician" {% if req.status == 'Received by Technician' %}selected{% endif %}>
-                      Received by Technician
-                    </option>
-                    <option value="Completed" {% if req.status == 'Completed' %}selected{% endif %}>
-                      Completed
+                      Pending Warehouse Processing
                     </option>
                   </select>
                 </div>
 
-                <div class="mb-3">
-                  <label class="form-label small fw-semibold text-secondary">Quantity Made Available <span class="text-danger">*</span></label>
-                  <input type="number" name="quantity_available" class="form-control" 
-                         value="{{ req.quantity_available if req.quantity_available > 0 else req.quantity_requested }}" min="0" required>
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label small fw-semibold text-secondary">Qty Available</label>
+                    <input type="number" name="quantity_available" class="form-control" 
+                           value="{{ req.quantity_available if req.quantity_available > 0 else req.quantity_requested }}" min="0">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small fw-semibold text-secondary">Supplier Lead Time (Days)</label>
+                    <input type="number" name="estimated_days" id="estimatedDays{{ req.id }}" class="form-control" 
+                           value="{{ req.estimated_days or '3' }}" min="0" placeholder="e.g. 3">
+                  </div>
+                </div>
+
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" name="order_placed" value="yes" id="orderPlaced{{ req.id }}" 
+                         {% if req.order_placed or req.status in ('Unavailable - Ordered', 'Not Available') %}checked{% endif %}>
+                  <label class="form-check-label small text-dark fw-semibold" for="orderPlaced{{ req.id }}">
+                    <i class="fa-solid fa-cart-shopping me-1 text-primary"></i> Supplier purchase order placed for this part
+                  </label>
+                </div>
+
+                <div class="mb-3" id="clarificationBox{{ req.id }}">
+                  <label class="form-label small fw-semibold text-secondary">Clarification Question for Technician (If needed)</label>
+                  <input type="text" name="clarification_requested" class="form-control" 
+                         value="{{ req.clarification_requested or '' }}" placeholder="e.g. Please confirm left or right side fitting / OEM vs aftermarket...">
                 </div>
 
                 {% if req.part_id %}
@@ -392,10 +441,10 @@
                 {% endif %}
 
                 <div class="mb-2">
-                  <label class="form-label small fw-semibold text-secondary">Department Remarks for Technician</label>
+                  <label class="form-label small fw-semibold text-secondary">Department Remarks for Technician & Admin</label>
                   <textarea name="parts_dept_notes" class="form-control" rows="2" 
-                            placeholder="e.g. Component ready at Counter 2. Box #42.">{{ req.parts_dept_notes or '' }}</textarea>
-                  <small class="text-muted" style="font-size: 0.72rem;">This message will be included in the technician's alert notification.</small>
+                            placeholder="e.g. Component ready at Counter 2. Box #42 / Supplier order placed with ETA 3 days.">{{ req.parts_dept_notes or '' }}</textarea>
+                  <small class="text-muted" style="font-size: 0.72rem;">This message and ETA will be sent to the technician and admin via alert notification.</small>
                 </div>
               </div>
               <div class="modal-footer border-0 pt-0 px-4 pb-4">

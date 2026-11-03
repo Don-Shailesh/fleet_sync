@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Report {{ job.invoice_number }} | {{ app_name }}</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      padding: 2rem 0;
+    }
+    .report-sheet {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 3rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+    }
+    .brand-logo-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.5rem;
+    }
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.35rem;
+    }
+    .report-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .report-sheet {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Top Bar with Back and Print Controls -->
+  <div class="container mb-4 no-print" style="max-width: 900px;">
+    <div class="d-flex justify-content-between align-items-center">
+      <a href="{{ url_for('tech_job_detail', job_id=job.id) }}" class="btn btn-sm btn-light border rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-arrow-left me-1"></i> Return to Workbench
+      </a>
+      <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+          <i class="fa-solid fa-print me-1"></i> Print / Save as PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-sheet">
+    
+    <!-- Report Header -->
+    <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4 flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-logo-box">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+        <div>
+          <h3 class="fw-bold text-dark m-0">{{ app_name }}</h3>
+          <p class="text-secondary small m-0">Certified Vehicle Service & Inspection Report</p>
+        </div>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill mb-1">
+          <i class="fa-solid fa-circle-check me-1"></i> Certified Completed
+        </span>
+        <div class="font-monospace fw-bold text-dark fs-5">{{ job.invoice_number }}</div>
+        <small class="text-muted">Completion Date: {{ report.completion_date | format_date }}</small>
+      </div>
+    </div>
+
+    <!-- Metadata Grid: Customer & Asset -->
+    <div class="row g-4 mb-4">
+      <!-- Customer Information -->
+      <div class="col-sm-6">
+        <div class="section-title">Customer Information</div>
+        <h5 class="fw-bold text-dark mb-1">{{ job.customer_name }}</h5>
+        {% if job.company_name %}
+          <div class="text-primary fw-semibold small mb-1">{{ job.company_name }}</div>
+        {% endif %}
+        <div class="small text-secondary">
+          <i class="fa-solid fa-phone text-muted me-1"></i> {{ job.customer_phone or 'N/A' }}<br>
+          <i class="fa-solid fa-envelope text-muted me-1"></i> {{ job.customer_email or 'N/A' }}<br>
+          <i class="fa-solid fa-location-dot text-muted me-1"></i> {{ job.customer_address or '' }} {{ job.customer_city or '' }}
+        </div>
+      </div>
+
+      <!-- Vehicle Specifications -->
+      <div class="col-sm-6">
+        <div class="section-title">Vehicle Asset Specifications</div>
+        <h5 class="fw-bold text-dark mb-1">{{ job.year }} {{ job.make }} {{ job.model }}</h5>
+        <div class="font-monospace fw-semibold text-primary mb-1">
+          Plate: {{ job.plate_number }} &bull; VIN: {{ job.vin }}
+        </div>
+        <div class="small text-secondary">
+          Odometer at Service: <strong>{{ job.odometer | format_km }}</strong><br>
+          Category: {{ job.vehicle_type }} &bull; Fuel: {{ job.fuel_type }}<br>
+          Primary Service: {{ job.service_type }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Sections -->
+    <!-- 1. Diagnosis -->
+    <div class="mb-4">
+      <div class="section-title">1. Problem Diagnosis & Root Cause Findings</div>
+      <div class="report-box text-dark">
+        {{ report.diagnosis | nl2br if report.diagnosis else 'Comprehensive multi-point inspection performed. Components inspected for mechanical wear and electronic tolerance compliance.' }}
+      </div>
+    </div>
+
+    <!-- 2. Work Performed -->
+    <div class="mb-4">
+      <div class="section-title">2. Work Executed & Service Bay Procedures</div>
+      <div class="report-box text-dark">
+        {{ report.work_performed | nl2br if report.work_performed else 'Standard service procedures executed according to OEM specifications.' }}
+      </div>
+    </div>
+
+    <!-- 3. Solution Provided -->
+    <div class="mb-4">
+      <div class="section-title">3. Solution Provided & Verification Test Outcomes</div>
+      <div class="report-box text-dark">
+        {{ report.solution_provided | nl2br if report.solution_provided else 'Vehicle underwent road test and diagnostic clearance. Functionality verified to manufacturer standards.' }}
+      </div>
+    </div>
+
+    <!-- 4. Spare Parts Used -->
+    {% if report.parts_used_summary or parts_used %}
+    <div class="mb-4">
+      <div class="section-title">4. Replacement Spare Parts & Consumables Utilized</div>
+      <div class="report-box text-dark">
+        {% if parts_used %}
+        <div class="table-responsive mb-2">
+          <table class="table table-sm table-borderless small m-0">
+            <thead class="border-bottom text-secondary">
+              <tr>
+                <th>Part Description</th>
+                <th>Part Number</th>
+                <th class="text-center">Quantity Used</th>
+                <th>Reconciliation Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in parts_used %}
+              <tr>
+                <td class="fw-bold text-dark">{{ p.part_name }}</td>
+                <td class="font-monospace text-muted">{{ p.part_number or 'N/A' }}</td>
+                <td class="text-center"><span class="badge bg-light text-dark border">{{ p.quantity_used or p.quantity_requested }}</span></td>
+                <td><span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2">Installed in Service</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+        {% if report.parts_used_summary %}
+        <div class="font-monospace small {% if parts_used %}pt-2 border-top text-secondary{% endif %}">
+          {{ report.parts_used_summary | nl2br }}
+        </div>
+        {% endif %}
+        {% if report.unused_parts_explanation %}
+        <div class="mt-2 pt-2 border-top small text-secondary">
+          <strong class="text-dark">Unused Parts Returned:</strong> {{ report.unused_parts_explanation }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 5. Quality Test Results -->
+    {% if report.test_results %}
+    <div class="mb-4">
+      <div class="section-title">5. Quality Test Results & Road Verification</div>
+      <div class="report-box text-dark">
+        {{ report.test_results | nl2br }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 6. Final Vehicle Condition -->
+    {% if report.final_vehicle_condition %}
+    <div class="mb-4">
+      <div class="section-title">6. Final Vehicle Condition at Handover</div>
+      <div class="report-box text-dark">
+        <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill">
+          <i class="fa-solid fa-circle-check me-1"></i> {{ report.final_vehicle_condition }}
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 7. Advisory & Maintenance Recommendations -->
+    {% if report.remarks or report.follow_up_recommendations %}
+    <div class="mb-4">
+      <div class="section-title">7. Technician Advisory & Maintenance Recommendations</div>
+      <div class="report-box text-dark bg-info bg-opacity-10 border-info border-opacity-25">
+        {% if report.follow_up_recommendations %}
+        <div class="mb-2">
+          <strong><i class="fa-solid fa-calendar-check text-info me-1"></i> Preventive Recommendations:</strong>
+          <div>{{ report.follow_up_recommendations | nl2br }}</div>
+        </div>
+        {% endif %}
+        {% if report.remarks %}
+        <div>
+          <strong><i class="fa-solid fa-circle-info text-info me-1"></i> Service Remarks:</strong>
+          <div>{{ report.remarks | nl2br }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 8. Service Documentation Photos -->
+    {% if report.before_image_url or report.after_image_url %}
+    <div class="mb-4">
+      <div class="section-title">8. Service Documentation Photos</div>
+      <div class="row g-3 mt-1">
+        {% if report.before_image_url %}
+        <div class="col-6 text-center">
+          <small class="text-secondary fw-semibold d-block mb-1">Before Service</small>
+          <img src="{{ report.before_image_url }}" alt="Before Service" class="img-fluid rounded border shadow-xs" style="max-height: 220px; width: 100%; object-fit: cover;">
+        </div>
+        {% endif %}
+        {% if report.after_image_url %}
+        <div class="col-6 text-center">
+          <small class="text-secondary fw-semibold d-block mb-1">After Service / Restored</small>
+          <img src="{{ report.after_image_url }}" alt="After Service" class="img-fluid rounded border shadow-xs" style="max-height: 220px; width: 100%; object-fit: cover;">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.get('user_role') != 'Technician' %}
+    <!-- Approved Itemized Billing & Labor Calculation Summary (Admin View Only) -->
+    <div class="mb-4">
+      <div class="section-title">Itemized Billing & Labor Summary (Predefined Rates)</div>
+      <div class="report-box p-3">
+        <div class="row g-3 small">
+          <div class="col-sm-6">
+            <span class="text-secondary d-block">Parts & Materials Subtotal:</span>
+            <strong class="text-dark font-monospace fs-6">{{ job.parts_cost | currency }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-secondary d-block">Labor Charges ({{ report.labor_service_type or job.service_type }} &bull; {{ report.labor_hours or job.labor_hours_billed or 'N/A' }} hrs):</span>
+            <strong class="text-dark font-monospace fs-6">{{ job.labor_cost | currency }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-secondary d-block">Applicable GST & Taxes:</span>
+            <strong class="text-dark font-monospace">{{ job.tax_amount | currency }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-secondary d-block">Total Approved Work Order Bill:</span>
+            <strong class="text-primary font-monospace fs-5">{{ job.total_cost | currency }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Sign-off & Technician Stamp -->
+    <div class="row g-4 mt-5 pt-4 border-top">
+      <div class="col-6">
+        <small class="text-secondary text-uppercase d-block mb-3" style="font-size: 0.72rem;">CERTIFIED TECHNICIAN SIGN-OFF</small>
+        <div class="fw-bold text-dark">{{ job.tech_name or 'Certified Fleet Technician' }}</div>
+        <div class="small text-secondary font-monospace">{{ job.technician_code or 'TECH-' ~ job.user_id }}</div>
+        <div class="small text-muted">Specialization: {{ job.specialization or 'Automotive & Heavy Fleet Systems' }}</div>
+      </div>
+      <div class="col-6 text-end">
+        <small class="text-secondary text-uppercase d-block mb-3" style="font-size: 0.72rem;">WORKSHOP AUTHORIZATION</small>
+        <div class="fw-bold text-dark">{{ company_name }}</div>
+        <div class="small text-secondary">Quality Inspection Verified</div>
+        <div class="small text-muted font-monospace">STAMP: FS-CERT-{{ job.id }}-OK</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
+

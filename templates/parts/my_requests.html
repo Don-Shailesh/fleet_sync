@@ -64,10 +64,13 @@
         <div class="col-md-4">
           <select name="status" class="form-select">
             <option value="All" {% if not status or status == 'All' %}selected{% endif %}>All Statuses</option>
-            <option value="Part Available" {% if status == 'Part Available' %}selected{% endif %}>Part Available (Ready for Collection)</option>
+            <option value="Part Available" {% if status == 'Part Available' %}selected{% endif %}>Part Available / Ready</option>
+            <option value="Approved" {% if status == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Issued" {% if status == 'Issued' %}selected{% endif %}>Issued at Counter</option>
             <option value="Waiting for Parts" {% if status == 'Waiting for Parts' %}selected{% endif %}>Waiting for Parts / Pending</option>
-            <option value="Not Available" {% if status == 'Not Available' %}selected{% endif %}>Not Available</option>
-            <option value="Received by Technician" {% if status == 'Received by Technician' %}selected{% endif %}>Received</option>
+            <option value="Not Available" {% if status == 'Not Available' %}selected{% endif %}>Not Available / Rejected</option>
+            <option value="Received by Technician" {% if status == 'Received by Technician' %}selected{% endif %}>Received by Tech</option>
+            <option value="Used in Service" {% if status == 'Used in Service' %}selected{% endif %}>Used in Service</option>
             <option value="Completed" {% if status == 'Completed' %}selected{% endif %}>Completed</option>
           </select>
         </div>
@@ -172,21 +175,29 @@
 
             <!-- Status -->
             <td>
-              {% if req.status == 'Part Available' %}
+              {% if req.status in ('Part Available', 'Approved') %}
                 <span class="badge bg-success text-white rounded-pill px-3 py-1 shadow-xs animate__animated animate__pulse animate__infinite">
-                  <i class="fa-solid fa-circle-check me-1"></i> Part Available!
+                  <i class="fa-solid fa-circle-check me-1"></i> {{ req.status }}
+                </span>
+              {% elif req.status == 'Issued' %}
+                <span class="badge bg-primary text-white rounded-pill px-3 py-1 shadow-xs">
+                  <i class="fa-solid fa-truck-ramp-box me-1"></i> Issued at Counter
                 </span>
               {% elif req.status in ('Waiting for Parts', 'Pending', 'Request Sent') %}
                 <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 rounded-pill px-2 py-1">
                   <i class="fa-solid fa-clock me-1"></i> {{ req.status }}
                 </span>
-              {% elif req.status == 'Not Available' %}
+              {% elif req.status in ('Not Available', 'Rejected') %}
                 <span class="badge bg-danger bg-opacity-15 text-danger rounded-pill px-2 py-1">
-                  <i class="fa-solid fa-circle-xmark me-1"></i> Not Available
+                  <i class="fa-solid fa-circle-xmark me-1"></i> {{ req.status }}
                 </span>
               {% elif req.status == 'Received by Technician' %}
                 <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
                   <i class="fa-solid fa-hand-holding me-1"></i> Received
+                </span>
+              {% elif req.status == 'Used in Service' %}
+                <span class="badge bg-light text-success border border-success rounded-pill px-2 py-1">
+                  <i class="fa-solid fa-wrench me-1"></i> Used in Service
                 </span>
               {% elif req.status == 'Repair In Progress' %}
                 <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1">
@@ -205,15 +216,15 @@
 
             <!-- Action -->
             <td class="text-end">
-              {% if req.status == 'Part Available' %}
+              {% if req.status in ('Part Available', 'Approved', 'Issued') %}
                 <form action="{{ url_for('parts_request_mark_received', request_id=req.id) }}" method="POST" class="d-inline m-0">
                   <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold">
                     <i class="fa-solid fa-hand-holding me-1"></i> Mark Received & Resume
                   </button>
                 </form>
-              {% elif req.status == 'Received by Technician' %}
-                <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-xs">
-                  <i class="fa-solid fa-wrench me-1"></i> Open Order
+              {% elif current_user.role == 'Technician' %}
+                <a href="{{ url_for('tech_job_detail', job_id=req.service_record_id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-xs">
+                  <i class="fa-solid fa-wrench me-1"></i> Workbench
                 </a>
               {% else %}
                 <a href="{{ url_for('service_detail', record_id=req.service_record_id) }}" class="btn btn-sm btn-light border rounded-pill px-3">

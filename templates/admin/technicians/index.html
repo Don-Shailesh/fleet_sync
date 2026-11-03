@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Management Roster - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb & Top Bar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item active fw-bold">Technicians Management</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold text-dark m-0 mt-1">Technicians Management Roster</h3>
+      <p class="text-secondary small m-0">Manage certified technicians, duty availability, credential access, and assign service workloads.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('tech_jobs') }}" class="btn btn-outline-primary rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-clipboard-user me-1"></i> Live Job Queue
+      </a>
+      <a href="{{ url_for('admin_technician_create') }}" class="btn btn-fs-primary rounded-pill px-4 shadow-sm">
+        <i class="fa-solid fa-user-plus me-1"></i> Add New Technician
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Overview Metrics -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-primary">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Total Technicians</span>
+            <h3 class="fw-bold text-dark m-0 mt-1">{{ total_technicians }}</h3>
+            <span class="text-muted small">Registered in system</span>
+          </div>
+          <span class="brand-icon-box bg-primary bg-opacity-10 text-primary">
+            <i class="fa-solid fa-users-gear fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-success">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Active Accounts</span>
+            <h3 class="fw-bold text-success m-0 mt-1">{{ active_technicians }}</h3>
+            <span class="text-muted small">Authorized to log in</span>
+          </div>
+          <span class="brand-icon-box bg-success bg-opacity-10 text-success">
+            <i class="fa-solid fa-user-check fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-info">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Duty Availability</span>
+            <div class="d-flex align-items-baseline gap-2 mt-1">
+              <h3 class="fw-bold text-success m-0">{{ available_now }}</h3>
+              <span class="text-success small fw-semibold">Available</span>
+            </div>
+            <div class="d-flex flex-wrap gap-1 mt-1">
+              <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-50 small" title="Busy on jobs">
+                <i class="fa-solid fa-clock text-warning me-1"></i>{{ busy_now }} Busy
+              </span>
+              <span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-50 small" title="On leave">
+                <i class="fa-solid fa-mug-hot text-secondary me-1"></i>{{ on_leave_now }} Leave
+              </span>
+            </div>
+          </div>
+          <span class="brand-icon-box bg-info bg-opacity-10 text-info">
+            <i class="fa-solid fa-user-clock fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card fs-card p-3 shadow-xs border-start border-4 border-warning">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Ongoing Work Orders</span>
+            <h3 class="fw-bold text-warning m-0 mt-1">{{ total_active_jobs }}</h3>
+            <span class="text-muted small">Repairs currently in progress</span>
+          </div>
+          <span class="brand-icon-box bg-warning bg-opacity-10 text-warning">
+            <i class="fa-solid fa-wrench fa-lg"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card fs-card mb-4 shadow-sm">
+    <div class="card-body p-3 p-md-4">
+      <form method="GET" action="{{ url_for('admin_technicians') }}" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold text-secondary mb-1">Search Technicians</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" name="search" class="form-control border-start-0" placeholder="Name, Code (TECH-...), Phone, Email..." value="{{ search }}">
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+          <label class="form-label small fw-semibold text-secondary mb-1">Account Status</label>
+          <select name="status" class="form-select">
+            <option value="All" {% if not status_filter or status_filter == 'All' %}selected{% endif %}>All Accounts</option>
+            <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active Only</option>
+            <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Deactivated Only</option>
+          </select>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+          <label class="form-label small fw-semibold text-secondary mb-1">Duty Availability</label>
+          <select name="availability" class="form-select">
+            <option value="All" {% if not availability_filter or availability_filter == 'All' %}selected{% endif %}>All Duty States</option>
+            <option value="Available" {% if availability_filter == 'Available' %}selected{% endif %}>Available</option>
+            <option value="Busy" {% if availability_filter == 'Busy' %}selected{% endif %}>Busy / Occupied</option>
+            <option value="On Leave" {% if availability_filter == 'On Leave' %}selected{% endif %}>On Leave</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100 shadow-sm" title="Apply Filter">
+            <i class="fa-solid fa-filter me-1"></i> Filter
+          </button>
+          <a href="{{ url_for('admin_technicians') }}" class="btn btn-light border px-3" title="Reset Filters">
+            <i class="fa-solid fa-rotate-left"></i>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Technicians Catalog Roster Table Card -->
+  <div class="card fs-card overflow-hidden shadow-sm" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Technicians Roster & Workload Tracking</h5>
+        <small class="text-secondary">Tracking individual technician performance, assigned tasks, and login status</small>
+      </div>
+      <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">Showing {{ technicians|length }} Technician(s)</span>
+    </div>
+
+    <div class="table-responsive" style="min-height: 280px;">
+      <table class="fs-table table-align-middle">
+        <thead>
+          <tr>
+            <th>Technician Details</th>
+            <th>Contact & Location</th>
+            <th>Specialization & Skills</th>
+            <th class="text-center">Duty Status</th>
+            <th class="text-center">Workload Pipeline</th>
+            <th class="text-center">Account Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tech in technicians %}
+          <tr>
+            <!-- Technician Details -->
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1rem; flex-shrink: 0;">
+                  {{ tech.name[:2]|upper }}
+                </div>
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <a href="{{ url_for('admin_technician_workload', tech_id=tech.id) }}" class="fw-bold text-dark text-decoration-none hover-primary">
+                      {{ tech.name }}
+                    </a>
+                    {% if tech.technician_code %}
+                      <span class="badge bg-light text-primary border font-monospace small px-2 py-0">
+                        {{ tech.technician_code }}
+                      </span>
+                    {% endif %}
+                  </div>
+                  <span class="text-secondary small d-block">{{ tech.email }}</span>
+                  {% if tech.avg_rating %}
+                    <div class="small text-warning mt-1">
+                      {% for i in range(tech.avg_rating|int) %}<i class="fa-solid fa-star fa-xs"></i>{% endfor %}
+                      <span class="text-secondary ms-1 fw-bold">({{ tech.avg_rating }})</span>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+
+            <!-- Contact & Location -->
+            <td>
+              <div class="small">
+                {% if tech.phone %}
+                  <a href="tel:{{ tech.phone }}" class="text-success text-decoration-none fw-semibold d-block mb-1">
+                    <i class="fa-solid fa-phone me-1"></i> {{ tech.phone }}
+                  </a>
+                {% else %}
+                  <span class="text-muted d-block mb-1"><i class="fa-solid fa-phone me-1"></i> No Phone</span>
+                {% endif %}
+
+                {% if tech.address %}
+                  <span class="text-secondary text-truncate d-inline-block" style="max-width: 200px;" title="{{ tech.address }}">
+                    <i class="fa-solid fa-location-dot me-1 text-danger"></i> {{ tech.address }}
+                  </span>
+                {% else %}
+                  <span class="text-muted small"><i class="fa-solid fa-location-dot me-1"></i> Workshop Floor</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <!-- Specialization & Skills -->
+            <td>
+              <strong class="text-dark small d-block mb-1">{{ tech.specialization or 'General Automotive Maintenance' }}</strong>
+              {% if tech.skills %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for s in tech.skills.split(',')[:3] %}
+                    <span class="badge bg-light text-secondary border rounded-pill" style="font-size: 0.7rem;">{{ s.strip() }}</span>
+                  {% endfor %}
+                  {% if tech.skills.split(',')|length > 3 %}
+                    <span class="badge bg-light text-muted border rounded-pill" style="font-size: 0.7rem;">+{{ tech.skills.split(',')|length - 3 }}</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <span class="text-muted small">Standard Repairs</span>
+              {% endif %}
+            </td>
+
+            <!-- Duty Status Dropdown -->
+            <td class="text-center">
+              <div class="dropdown d-inline-block">
+                <button class="btn btn-sm dropdown-toggle rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs border {% if tech.availability_status == 'Available' %}btn-outline-success bg-success bg-opacity-10 text-success border-success border-opacity-25{% elif tech.availability_status == 'Busy' %}btn-outline-warning bg-warning bg-opacity-10 text-warning border-warning border-opacity-25{% else %}btn-outline-secondary bg-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25{% endif %}"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Click to change duty status">
+                  {% if tech.availability_status == 'Available' %}
+                    <i class="fa-solid fa-circle-check text-success me-1"></i> Available
+                  {% elif tech.availability_status == 'Busy' %}
+                    <i class="fa-solid fa-clock text-warning me-1"></i> Busy / On Job
+                  {% else %}
+                    <i class="fa-solid fa-mug-hot text-secondary me-1"></i> On Leave
+                  {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-center shadow border-0 rounded-3 p-2" style="min-width: 190px;">
+                  <li class="dropdown-header small text-uppercase fw-bold text-muted px-2 py-1">Change Duty Status</li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="Available">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'Available' %}active bg-success text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-circle-check text-success me-2 {% if tech.availability_status == 'Available' %}text-white{% endif %}"></i> Available</span>
+                        {% if tech.availability_status == 'Available' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="Busy">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'Busy' %}active bg-warning text-dark fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-clock text-warning me-2 {% if tech.availability_status == 'Busy' %}text-dark{% endif %}"></i> Busy / On Job</span>
+                        {% if tech.availability_status == 'Busy' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="On Leave">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'On Leave' %}active bg-secondary text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-mug-hot text-secondary me-2 {% if tech.availability_status == 'On Leave' %}text-white{% endif %}"></i> On Leave</span>
+                        {% if tech.availability_status == 'On Leave' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+
+            <!-- Workload Pipeline -->
+            <td class="text-center">
+              <div class="d-inline-flex gap-2">
+                <span class="badge bg-light text-dark border px-2 py-1" title="Total Assigned">
+                  <strong class="text-primary">{{ tech.total_assigned }}</strong> Total
+                </span>
+                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-2 py-1" title="Ongoing / In Progress">
+                  <strong class="text-warning">{{ tech.ongoing_count }}</strong> Ongoing
+                </span>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1" title="Completed Jobs">
+                  <strong class="text-success">{{ tech.completed_count }}</strong> Done
+                </span>
+              </div>
+            </td>
+
+            <!-- Account Status -->
+            <td class="text-center">
+              {% if tech.status == 'Active' %}
+                <span class="badge bg-success px-2 py-1 rounded-pill small">Active</span>
+              {% else %}
+                <span class="badge bg-danger px-2 py-1 rounded-pill small">Deactivated</span>
+              {% endif %}
+            </td>
+
+            <!-- Actions -->
+            <td class="text-end text-nowrap">
+              <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-light border dropdown-toggle rounded-pill px-3 shadow-xs" type="button" data-bs-toggle="dropdown">
+                  Actions
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                  <!-- View Workload & History -->
+                  <li>
+                    <a class="dropdown-item py-2" href="{{ url_for('admin_technician_workload', tech_id=tech.id) }}">
+                      <i class="fa-solid fa-chart-line text-primary me-2"></i> View Workload & Jobs
+                    </a>
+                  </li>
+                  <!-- Assign Job directly -->
+                  <li>
+                    <a class="dropdown-item py-2" href="{{ url_for('service_create') }}?tech_id={{ tech.id }}">
+                      <i class="fa-solid fa-wrench text-warning me-2"></i> Assign New Work Order
+                    </a>
+                  </li>
+                  <!-- Edit Details -->
+                  <li>
+                    <a class="dropdown-item py-2" href="{{ url_for('admin_technician_edit', tech_id=tech.id) }}">
+                      <i class="fa-solid fa-pen-to-square text-info me-2"></i> Edit Details & Credentials
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <!-- Duty Status Quick Set in Actions -->
+                  <li class="dropdown-header small text-uppercase fw-bold text-muted px-3 py-1">Set Duty Status</li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="Available">
+                      <button type="submit" class="dropdown-item py-2 text-success small {% if tech.availability_status == 'Available' %}fw-bold bg-success bg-opacity-10{% endif %}">
+                        <i class="fa-solid fa-circle-check me-2"></i> Mark as Available
+                        {% if tech.availability_status == 'Available' %}<i class="fa-solid fa-check float-end ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="Busy">
+                      <button type="submit" class="dropdown-item py-2 text-warning small {% if tech.availability_status == 'Busy' %}fw-bold bg-warning bg-opacity-10{% endif %}">
+                        <i class="fa-solid fa-clock me-2"></i> Mark as Busy / On Job
+                        {% if tech.availability_status == 'Busy' %}<i class="fa-solid fa-check float-end ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li>
+                    <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="availability_status" value="On Leave">
+                      <button type="submit" class="dropdown-item py-2 text-secondary small {% if tech.availability_status == 'On Leave' %}fw-bold bg-secondary bg-opacity-10{% endif %}">
+                        <i class="fa-solid fa-mug-hot me-2"></i> Mark as On Leave
+                        {% if tech.availability_status == 'On Leave' %}<i class="fa-solid fa-check float-end ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <!-- Activate / Deactivate Toggle -->
+                  <li>
+                    <form action="{{ url_for('admin_technician_toggle_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                      <button type="submit" class="dropdown-item py-2 {% if tech.status == 'Active' %}text-warning{% else %}text-success{% endif %}">
+                        {% if tech.status == 'Active' %}
+                          <i class="fa-solid fa-user-slash me-2"></i> Deactivate Account
+                        {% else %}
+                          <i class="fa-solid fa-user-check me-2"></i> Activate Account
+                        {% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <!-- Delete with Modal -->
+                  <li>
+                    <button type="button" class="dropdown-item py-2 text-danger" data-bs-toggle="modal" data-bs-target="#deleteTechModal{{ tech.id }}">
+                      <i class="fa-solid fa-trash-can me-2"></i> Delete Technician...
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Delete Confirmation Modal -->
+              <div class="modal fade" id="deleteTechModal{{ tech.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                      <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Delete Technician Account
+                      </h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-start pt-3">
+                      <p class="text-dark mb-2">Are you sure you want to delete technician <strong>{{ tech.name }}</strong> ({{ tech.technician_code or tech.email }})?</p>
+                      {% if tech.total_assigned > 0 %}
+                      <div class="alert alert-warning border-0 small rounded-3 p-3">
+                        <i class="fa-solid fa-shield-halved me-1"></i>
+                        <strong>Notice:</strong> This technician has <strong>{{ tech.total_assigned }}</strong> associated work order(s). To protect historical customer records and service audits, the system will safely <strong>Deactivate</strong> this account instead of permanent record destruction.
+                      </div>
+                      {% else %}
+                      <p class="small text-muted mb-0">This technician has no linked work orders. Their profile and login credentials will be permanently removed.</p>
+                      {% endif %}
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                      <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                      <form action="{{ url_for('admin_technician_delete', tech_id=tech.id) }}" method="POST" class="m-0">
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 shadow-sm">
+                          Confirm Delete
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted">
+                <i class="fa-solid fa-user-xmark fa-3x mb-3 text-secondary opacity-50"></i>
+                <h5 class="fw-bold text-dark">No Technicians Found</h5>
+                <p class="small text-secondary mb-3">No technician profiles match your current search and filter criteria.</p>
+                <a href="{{ url_for('admin_technician_create') }}" class="btn btn-sm btn-primary rounded-pill px-4">
+                  <i class="fa-solid fa-plus me-1"></i> Add First Technician
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

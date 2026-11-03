@@ -18,6 +18,14 @@
       <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#requestPartsModal">
         <i class="fa-solid fa-boxes-stacked me-1"></i> Request Spare Parts
       </button>
+      <a href="{{ url_for('tech_job_report_form', job_id=service.id) }}" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-file-signature me-1"></i> Submit Service Report
+      </a>
+      {% endif %}
+      {% if service_report %}
+      <a href="{{ url_for('tech_job_report_view', job_id=service.id) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-file-lines me-1"></i> View Service Report
+      </a>
       {% endif %}
       <a href="{{ url_for('service_invoice', record_id=service.id) }}" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
         <i class="fa-solid fa-print me-1"></i> Print / PDF Invoice
@@ -28,6 +36,96 @@
     </div>
   </div>
 
+  <!-- Reschedule Request Alert Banner -->
+  {% if service.reschedule_requested %}
+  <div class="alert alert-warning border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-calendar-clock fa-2x text-warning-emphasis"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Technician Requested Appointment Reschedule</h6>
+        <p class="small text-secondary mb-0">
+          Proposed Date: <strong class="text-dark">{{ service.reschedule_date | format_date }}</strong> at <strong>{{ service.reschedule_time or '10:00 AM' }}</strong> &bull; Reason: <em>"{{ service.reschedule_reason }}"</em>
+          {% if service.tech_name %}(Requested by {{ service.tech_name }}){% endif %}
+        </p>
+      </div>
+    </div>
+    {% if current_user.role == 'Admin' %}
+    <div class="d-flex gap-2">
+      <form action="{{ url_for('service_reschedule_action', record_id=service.id) }}" method="POST" class="m-0">
+        <input type="hidden" name="action" value="approve">
+        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs">
+          <i class="fa-solid fa-check me-1"></i> Approve Reschedule
+        </button>
+      </form>
+      <form action="{{ url_for('service_reschedule_action', record_id=service.id) }}" method="POST" class="m-0">
+        <input type="hidden" name="action" value="decline">
+        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-xs">
+          <i class="fa-solid fa-xmark me-1"></i> Decline
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">Pending Admin Approval</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Workflow Progress Stepper (6-Step Pipeline) -->
+  {% set stage_meta = service.status | workflow_meta %}
+  <div class="card fs-card mb-4 p-3 shadow-sm border-0 bg-white" data-aos="fade-down">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-2 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge {{ stage_meta.badge_class }} rounded-pill px-3 py-1 fs-6">
+          <i class="{{ stage_meta.icon }} me-1"></i> Stage {{ stage_meta.stage }}: {{ stage_meta.name }}
+        </span>
+        <span class="text-secondary small">&bull; Responsible: <strong class="text-dark">{{ stage_meta.responsible }}</strong> &bull; Next Action: <em class="text-primary">{{ stage_meta.next_action }}</em></span>
+      </div>
+      <div>
+        <a href="#workflow-timeline-section" class="btn btn-xs btn-outline-secondary rounded-pill px-3">
+          <i class="fa-solid fa-timeline me-1"></i> Audit History ({{ workflow_history|length }})
+        </a>
+      </div>
+    </div>
+
+    <!-- Stepper Visual -->
+    <div class="d-none d-md-flex align-items-center justify-content-between px-2 pt-2">
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 1 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-clipboard-check"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 1 %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">1. Inspection & Parts</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 1 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 20px;"></div>
+
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 2 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-boxes-packing"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 2 %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">2. Parts Review</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 2 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 20px;"></div>
+
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 3 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-clock"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 3 %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">3. Duration Estimate</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 3 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 20px;"></div>
+
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 4 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 4 %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">4. Admin Schedule</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 4 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 20px;"></div>
+
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 5 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-wrench"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 5 %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">5. Repair Execution</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 5 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 20px;"></div>
+
+      <div class="text-center flex-fill">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 6 %}bg-success text-white{% else %}bg-light text-muted border{% endif %}" style="width: 34px; height: 34px; line-height: 18px;"><i class="fa-solid fa-check-double"></i></div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 6 %}text-success{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">6. Final Report</div>
+      </div>
+    </div>
+  </div>
+
   <div class="row g-4">
     <!-- Main Left Column -->
     <div class="col-lg-8" data-aos="fade-up">
@@ -35,13 +133,25 @@
       <div class="card fs-card mb-4 p-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
           <div>
-            <span class="badge bg-light text-primary border font-monospace px-2 py-1 mb-1">
-              {{ service.invoice_number }}
-            </span>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+              <span class="badge bg-light text-primary border font-monospace px-2 py-1">
+                {{ service.invoice_number }}
+              </span>
+              {% if service.priority == 'Critical' %}
+                <span class="badge bg-danger rounded-pill px-2 py-1"><i class="fa-solid fa-fire me-1"></i>Critical Priority</span>
+              {% elif service.priority == 'High' %}
+                <span class="badge bg-warning text-dark rounded-pill px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>High Priority</span>
+              {% elif service.priority == 'Low' %}
+                <span class="badge bg-secondary rounded-pill px-2 py-1">Low Priority</span>
+              {% else %}
+                <span class="badge bg-info text-dark rounded-pill px-2 py-1">Medium Priority</span>
+              {% endif %}
+            </div>
             <h3 class="fw-bold text-dark m-0">{{ service.service_type }}</h3>
             <small class="text-secondary">
               Date: <strong class="text-dark">{{ service.service_date | format_date }}</strong> &bull; 
-              Odometer at Service: <strong class="text-dark">{{ service.odometer | format_km }}</strong>
+              Appt: <strong class="text-dark">{{ service.appointment_date | format_date }} ({{ service.appointment_time or '10:00' }})</strong> &bull;
+              Odometer: <strong class="text-dark">{{ service.odometer | format_km }}</strong>
             </small>
           </div>
           <div class="text-end">
@@ -79,6 +189,294 @@
         </div>
         {% endif %}
       </div>
+
+      <!-- =======================================================
+           ADMIN WORKFLOW STAGE 4: SCHEDULING & AUTHORIZATION PANEL
+           ======================================================= -->
+      {% if current_user.role == 'Admin' and service.status in ('Ready to Schedule', 'Inspection Submitted', 'Parts Under Review', 'Awaiting Parts', 'Waiting for Parts', 'Pending', 'Accepted') %}
+      <div class="card fs-card mb-4 shadow-sm border border-primary border-opacity-25" data-aos="fade-up">
+        <div class="card-header bg-primary bg-opacity-10 border-0 pt-3 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-primary fs-5"></i>
+            <div>
+              <h5 class="fw-bold text-dark m-0">Admin Workflow: Schedule & Authorize Repair</h5>
+              <small class="text-secondary">Review technician diagnosis, supplier lead times, and duration estimate to plan bay execution</small>
+            </div>
+          </div>
+          <span class="badge bg-primary rounded-pill px-3 py-1">Workflow Step 4</span>
+        </div>
+
+        <div class="card-body p-4 pt-2">
+          <!-- Diagnosis & Duration Context Box -->
+          <div class="row g-3 mb-3 small">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3 h-100 border">
+                <span class="text-secondary fw-semibold d-block mb-1">
+                  <i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> TECHNICIAN DIAGNOSIS
+                </span>
+                <p class="m-0 text-dark">{{ service.inspection_diagnosis or service.technician_notes or 'Intake inspection in progress.' }}</p>
+                {% if service.inspection_symptoms %}
+                <small class="text-muted d-block mt-2"><strong>Symptoms:</strong> {{ service.inspection_symptoms }}</small>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3 h-100 border">
+                <span class="text-secondary fw-semibold d-block mb-1">
+                  <i class="fa-solid fa-clock me-1 text-info"></i> ESTIMATED REPAIR DURATION
+                </span>
+                {% if service.estimated_duration_hours %}
+                  <h4 class="fw-bold text-primary m-0">{{ service.estimated_duration_hours }} <span class="fs-6 text-muted">Hours (Hands-on Bay Time)</span></h4>
+                  <small class="text-success d-block mt-1"><i class="fa-solid fa-check me-1"></i>Estimated by {{ service.tech_name or 'Technician' }}</small>
+                {% else %}
+                  <span class="text-warning fw-bold d-block"><i class="fa-solid fa-triangle-exclamation me-1"></i>Estimate Pending</span>
+                  <small class="text-muted">Technician has not submitted hands-on duration yet.</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Parts ETA Summary -->
+          {% if part_requests %}
+          <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mb-3 small">
+            <span class="text-warning-emphasis fw-bold d-block mb-1">
+              <i class="fa-solid fa-boxes-packing me-1"></i> REQUISITIONED SPARE PARTS & SUPPLIER ETAS:
+            </span>
+            <ul class="list-unstyled mb-0">
+              {% for pr in part_requests %}
+              <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-warning border-opacity-25">
+                <span>
+                  <strong>{{ pr.quantity_requested }}x {{ pr.part_name }}</strong>
+                  {% if pr.part_number %}<small class="text-muted font-monospace">({{ pr.part_number }})</small>{% endif %}
+                </span>
+                <span>
+                  {% if pr.status in ('Part Available', 'Approved', 'Issued', 'Received by Technician') %}
+                    <span class="badge bg-success text-white rounded-pill"><i class="fa-solid fa-check me-1"></i>In Stock / Ready</span>
+                  {% elif pr.status in ('Unavailable - Ordered', 'Not Available') %}
+                    <span class="badge bg-warning text-dark rounded-pill"><i class="fa-solid fa-truck-clock me-1"></i>On Order: ETA {{ pr.estimated_delivery_date | format_date if pr.estimated_delivery_date else 'TBD' }}</span>
+                  {% else %}
+                    <span class="badge bg-light text-secondary border rounded-pill">{{ pr.status }}</span>
+                  {% endif %}
+                </span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- Scheduling Form -->
+          <form action="{{ url_for('admin_authorize_schedule', record_id=service.id) }}" method="POST">
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold text-secondary" for="sched-date">Planned Work Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="sched-date" name="scheduled_date" 
+                       value="{{ service.appointment_date or now.strftime('%Y-%m-%d') }}" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold text-secondary" for="sched-time">Planned Start Time</label>
+                <input type="time" class="form-control" id="sched-time" name="scheduled_time" 
+                       value="{{ service.appointment_time or '10:00' }}">
+              </div>
+              <div class="col-md-5">
+                <label class="form-label small fw-semibold text-secondary" for="sched-notes">Authorization Remarks / Bay Instructions</label>
+                <input type="text" class="form-control" id="sched-notes" name="schedule_notes" 
+                       value="{{ service.admin_schedule_notes or '' }}" placeholder="e.g. Bay 3 reserved, parts delivery verified.">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+              <small class="text-muted">
+                <i class="fa-solid fa-shield-halved text-primary me-1"></i> Work cannot proceed until Admin authorises and parts are ready.
+              </small>
+              <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                <i class="fa-solid fa-calendar-check me-1"></i> Authorize & Schedule Repair
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- =======================================================
+           ADMIN WORKFLOW STAGE 5: REPAIR QUALITY & BILLING REVIEW PANEL
+           ======================================================= -->
+      {% if current_user.role == 'Admin' and service.status in ('Awaiting Admin Approval', 'Revision Required') %}
+      <div class="card fs-card mb-4 shadow-sm border border-warning" data-aos="fade-up">
+        <div class="card-header bg-warning bg-opacity-15 border-0 pt-3 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-file-invoice-dollar text-warning-emphasis fs-5"></i>
+            <div>
+              <h5 class="fw-bold text-dark m-0">Admin Workflow: Review Final Report & Auto-Generated Bill</h5>
+              <small class="text-secondary">Technician has completed repairs and submitted work report. Review diagnostics, consumed parts, labor charges, and verify bill.</small>
+            </div>
+          </div>
+          <span class="badge bg-warning text-dark rounded-pill px-3 py-1">In Admin Review</span>
+        </div>
+
+        <div class="card-body p-4 pt-3">
+          {% if service_report %}
+          <!-- Report Highlights -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3 h-100 border">
+                <span class="text-secondary small fw-bold d-block mb-1">
+                  <i class="fa-solid fa-wrench me-1 text-primary"></i> WORK PERFORMED & PROCEDURES:
+                </span>
+                <p class="m-0 small text-dark fw-medium">{{ service_report.work_performed }}</p>
+                {% if service_report.test_results %}
+                <div class="mt-2 pt-2 border-top">
+                  <small class="text-secondary d-block fw-semibold">Quality Test Results:</small>
+                  <p class="m-0 small text-muted">{{ service_report.test_results }}</p>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3 h-100 border">
+                <span class="text-secondary small fw-bold d-block mb-1">
+                  <i class="fa-solid fa-shield-halved me-1 text-success"></i> VEHICLE CONDITION & LABOR:
+                </span>
+                <div class="small text-dark mb-1">Condition: <strong>{{ service_report.final_vehicle_condition or 'Road-Ready' }}</strong></div>
+                <div class="small text-dark mb-1">Labor Operation: <strong>{{ service_report.labor_service_type or service.service_type }}</strong> ({{ service_report.labor_hours or service.labor_hours_billed or 'N/A' }} hrs)</div>
+                {% if service_report.parts_used_summary %}
+                <div class="small text-muted mt-2 pt-2 border-top">
+                  <strong>Parts Used:</strong> <span class="font-monospace">{{ service_report.parts_used_summary }}</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Auto-Generated Bill Summary Strip -->
+          <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <span class="badge bg-primary text-white rounded-pill px-2 py-1 small mb-1">Auto-Generated Bill</span>
+                <div class="text-dark small">
+                  Parts: <strong>{{ service.parts_cost | currency }}</strong> &bull; 
+                  Labor: <strong>{{ service.labor_cost | currency }}</strong> &bull; 
+                  GST Tax: <strong>{{ service.tax_amount | currency }}</strong>
+                </div>
+              </div>
+              <div class="text-end">
+                <span class="text-secondary small d-block">Total Payable:</span>
+                <h4 class="fw-bold text-primary m-0 font-monospace">{{ service.total_cost | currency }}</h4>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <!-- Option 1: Approve -->
+            <div class="col-md-6 border-end">
+              <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-circle-check me-1"></i> Option A: Approve Completion & Bill</h6>
+              <p class="small text-secondary mb-2">Finalize work order, approve customer bill, set vehicle to Active, and generate printable reports.</p>
+              
+              <form action="{{ url_for('admin_review_repair', record_id=service.id) }}" method="POST">
+                <input type="hidden" name="decision" value="approve">
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Promotional / Fleet Discount (₹, Optional)</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light">₹</span>
+                    <input type="number" step="0.01" min="0" name="discount_amount" class="form-control" placeholder="0.00" value="{{ service.discount_amount or '0.00' }}">
+                  </div>
+                  <small class="text-muted" style="font-size: 0.7rem;">Discount deducted from total billed amount</small>
+                </div>
+                <input type="hidden" name="review_comments" value="Final work report and itemized bill approved by Admin.">
+                <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold w-100">
+                  <i class="fa-solid fa-check-double me-1"></i> Approve & Finalize Bill
+                </button>
+              </form>
+            </div>
+
+            <!-- Option 2: Return for Revision -->
+            <div class="col-md-6">
+              <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-rotate-left me-1"></i> Option B: Return for Revision</h6>
+              <p class="small text-secondary mb-2">Specify missing checks, parts corrections, or revision comments for technician.</p>
+              <form action="{{ url_for('admin_review_repair', record_id=service.id) }}" method="POST">
+                <input type="hidden" name="decision" value="revision">
+                <textarea name="review_comments" class="form-control mb-2" rows="3" required placeholder="Detail required corrections or re-inspection requirements..."></textarea>
+                <button type="submit" class="btn btn-outline-danger rounded-pill px-4 shadow-xs w-100">
+                  <i class="fa-solid fa-reply me-1"></i> Return for Technician Revision
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Official Service Report Card -->
+      {% if service_report %}
+      <div class="card fs-card mb-4 shadow-sm border border-success border-opacity-25">
+        <div class="card-header bg-success bg-opacity-10 border-0 pt-3 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-file-signature text-success"></i>
+            <h6 class="fw-bold text-dark m-0">Official Certified Service Report</h6>
+          </div>
+          <a href="{{ url_for('tech_job_report_view', job_id=service.id) }}" target="_blank" class="btn btn-xs btn-outline-success rounded-pill px-3">
+            <i class="fa-solid fa-print me-1"></i> View / Print Report
+          </a>
+        </div>
+        <div class="card-body p-4 pt-2">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <span class="badge bg-success text-white rounded-pill px-2 py-1 small">
+              <i class="fa-solid fa-check me-1"></i> Quality Inspection Certified
+            </span>
+            <small class="text-secondary">
+              Completed by: <strong class="text-dark">{{ service_report.tech_name }}</strong> ({{ service_report.technician_code or 'TECH' }}) &bull; Date: <strong>{{ service_report.completion_date | format_date }}</strong>
+            </small>
+          </div>
+
+          <div class="mb-3">
+            <strong class="text-dark small d-block mb-1">1. Problem Diagnosis:</strong>
+            <p class="text-secondary small mb-0 p-2 bg-light rounded">{{ service_report.diagnosis }}</p>
+          </div>
+
+          <div class="mb-3">
+            <strong class="text-dark small d-block mb-1">2. Work Performed:</strong>
+            <p class="text-secondary small mb-0 p-2 bg-light rounded">{{ service_report.work_performed }}</p>
+          </div>
+
+          <div class="mb-3">
+            <strong class="text-dark small d-block mb-1">3. Solution Provided:</strong>
+            <p class="text-secondary small mb-0 p-2 bg-light rounded">{{ service_report.solution_provided }}</p>
+          </div>
+
+          {% if service_report.parts_used_summary %}
+          <div class="mb-3">
+            <strong class="text-dark small d-block mb-1">4. Spare Parts Used:</strong>
+            <p class="text-secondary small mb-0 p-2 bg-light rounded font-monospace">{{ service_report.parts_used_summary }}</p>
+          </div>
+          {% endif %}
+
+          {% if service_report.remarks %}
+          <div class="mb-3">
+            <strong class="text-dark small d-block mb-1">5. Remarks & Recommendations:</strong>
+            <p class="text-secondary small mb-0 p-2 bg-info bg-opacity-10 border border-info border-opacity-25 rounded">{{ service_report.remarks }}</p>
+          </div>
+          {% endif %}
+
+          {% if service_report.before_image_url or service_report.after_image_url %}
+          <div class="row g-2 pt-2 border-top">
+            {% if service_report.before_image_url %}
+            <div class="col-6">
+              <small class="text-secondary fw-semibold d-block mb-1">Before Service Photo</small>
+              <img src="{{ service_report.before_image_url }}" alt="Before" class="img-fluid rounded border shadow-xs" style="max-height: 140px; width: 100%; object-fit: cover;">
+            </div>
+            {% endif %}
+            {% if service_report.after_image_url %}
+            <div class="col-6">
+              <small class="text-secondary fw-semibold d-block mb-1">After Service Photo</small>
+              <img src="{{ service_report.after_image_url }}" alt="After" class="img-fluid rounded border shadow-xs" style="max-height: 140px; width: 100%; object-fit: cover;">
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Spare Parts Requisition & Tracking Status Box -->
       {% if part_requests or service.status == 'Waiting for Parts' %}
@@ -266,40 +664,103 @@
       </div>
 
       <!-- Itemized Service Line Items -->
-      <div class="card fs-card mb-4 overflow-hidden">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
-          <h5 class="fw-bold text-dark m-0">Itemized Parts & Labor Breakdown</h5>
-          <small class="text-secondary">Line items billed for this repair order</small>
+      <div class="card fs-card mb-4 overflow-hidden shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold text-dark m-0">Itemized Parts & Labor Breakdown</h5>
+            <small class="text-secondary">Standard catalog prices & labor rate calculations billed for this repair order</small>
+          </div>
+          {% if service.status == 'Completed' %}
+          <div class="d-flex gap-2">
+            <a href="{{ url_for('service_invoice', record_id=service.id) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-xs">
+              <i class="fa-solid fa-print me-1"></i> Print Customer Invoice
+            </a>
+            <a href="{{ url_for('tech_job_report_view', job_id=service.id) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3 shadow-xs">
+              <i class="fa-solid fa-file-signature me-1"></i> Certified Report
+            </a>
+          </div>
+          {% endif %}
         </div>
 
         <div class="table-responsive">
-          <table class="fs-table">
-            <thead>
+          <table class="fs-table align-middle">
+            <thead class="table-light">
               <tr>
-                <th>Type</th>
+                <th style="width: 12%;">Type</th>
                 <th>Item / Description</th>
-                <th class="text-end">Qty / Hrs</th>
-                <th class="text-end">Unit Price</th>
-                <th class="text-end">Total</th>
+                <th class="text-end" style="width: 14%;">Qty / Hrs</th>
+                <th class="text-end" style="width: 16%;">Standard Rate</th>
+                <th class="text-center" style="width: 12%;">GST Tax</th>
+                <th class="text-end" style="width: 18%;">Line Total</th>
+                {% if current_user.role == 'Admin' and service.status != 'Completed' %}
+                <th class="text-center" style="width: 10%;">Adjust</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
               {% for item in items %}
               <tr>
                 <td>
-                  <span class="badge {% if item.item_type == 'Labor' %}bg-info text-dark{% elif item.item_type == 'Part' %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill px-2">
+                  <span class="badge {% if item.item_type == 'Labor' %}bg-info bg-opacity-15 text-info border border-info border-opacity-25{% elif item.item_type == 'Part' %}bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25{% else %}bg-secondary{% endif %} rounded-pill px-2 py-1">
                     {{ item.item_type }}
                   </span>
                 </td>
-                <td class="fw-semibold text-dark">{{ item.item_name }}</td>
-                <td class="text-end">{{ item.quantity }}</td>
-                <td class="text-end">{{ item.unit_price | currency }}</td>
-                <td class="text-end fw-bold">{{ item.total_price | currency }}</td>
+                <td class="fw-semibold text-dark">
+                  {{ item.item_name }}
+                  {% if item.item_type == 'Labor' and service.labor_charge_type %}
+                    <small class="text-muted d-block font-monospace" style="font-size: 0.72rem;">{{ service.labor_charge_type }} Rate Formula</small>
+                  {% endif %}
+                </td>
+                <td class="text-end font-monospace">{{ item.quantity }}</td>
+                <td class="text-end font-monospace">{{ item.unit_price | currency }}</td>
+                <td class="text-center font-monospace text-muted small">{{ item.tax_rate or 18 }}%</td>
+                <td class="text-end font-monospace fw-bold text-dark">{{ item.total_price | currency }}</td>
+                {% if current_user.role == 'Admin' and service.status != 'Completed' %}
+                <td class="text-center">
+                  <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1" data-bs-toggle="modal" data-bs-target="#adjustItemModal{{ item.id }}" title="Correct rate or quantity">
+                    <i class="fa-solid fa-pen" style="font-size: 0.7rem;"></i>
+                  </button>
+
+                  <!-- Modal to adjust item -->
+                  <div class="modal fade" id="adjustItemModal{{ item.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-sm text-start">
+                      <div class="modal-content rounded-4 border-0 shadow">
+                        <form action="{{ url_for('admin_adjust_bill_item', record_id=service.id) }}" method="POST">
+                          <input type="hidden" name="item_id" value="{{ item.id }}">
+                          <div class="modal-header border-0 pb-0">
+                            <h6 class="modal-title fw-bold text-dark">Correct Line Item</h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <small class="text-muted d-block mb-2">Adjust standard rate or quantity with audit log:</small>
+                            <div class="mb-2">
+                              <label class="form-label small fw-bold">Quantity / Hours</label>
+                              <input type="number" step="0.25" min="0.25" name="quantity" class="form-control form-control-sm" value="{{ item.quantity }}">
+                            </div>
+                            <div class="mb-2">
+                              <label class="form-label small fw-bold">Unit Price (₹)</label>
+                              <input type="number" step="0.01" min="0" name="unit_price" class="form-control form-control-sm" value="{{ item.unit_price }}">
+                            </div>
+                            <div class="mb-2">
+                              <label class="form-label small fw-bold">Reason for Correction</label>
+                              <input type="text" name="reason" class="form-control form-control-sm" placeholder="e.g. Special fleet discount, warranty credit..." required>
+                            </div>
+                          </div>
+                          <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3">Save Correction</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                {% endif %}
               </tr>
               {% else %}
               <tr>
-                <td colspan="5" class="text-center py-4 text-secondary">
-                  No line items attached. Edit order to add parts and labor hours.
+                <td colspan="{% if current_user.role == 'Admin' and service.status != 'Completed' %}7{% else %}6{% endif %}" class="text-center py-4 text-secondary">
+                  No line items attached yet. Line items are automatically generated when technician files final work report.
                 </td>
               </tr>
               {% endfor %}
@@ -313,19 +774,25 @@
             <div class="col-md-6 col-lg-5">
               <div class="d-flex justify-content-between py-1 small">
                 <span class="text-secondary">Parts & Materials Subtotal:</span>
-                <span class="fw-semibold text-dark">{{ service.parts_cost | currency }}</span>
+                <span class="fw-semibold text-dark font-monospace">{{ service.parts_cost | currency }}</span>
               </div>
               <div class="d-flex justify-content-between py-1 small">
-                <span class="text-secondary">Labor Charges Subtotal:</span>
-                <span class="fw-semibold text-dark">{{ service.labor_cost | currency }}</span>
+                <span class="text-secondary">Labor Service Charges:</span>
+                <span class="fw-semibold text-dark font-monospace">{{ service.labor_cost | currency }}</span>
               </div>
               <div class="d-flex justify-content-between py-1 small">
-                <span class="text-secondary">Estimated Tax (8%):</span>
-                <span class="fw-semibold text-dark">{{ service.tax_amount | currency }}</span>
+                <span class="text-secondary">Applicable GST Tax (Predefined):</span>
+                <span class="fw-semibold text-dark font-monospace">{{ service.tax_amount | currency }}</span>
               </div>
+              {% if service.discount_amount and service.discount_amount > 0 %}
+              <div class="d-flex justify-content-between py-1 small text-success">
+                <span>Fleet / Promotional Discount:</span>
+                <span class="fw-bold font-monospace">-{{ service.discount_amount | currency }}</span>
+              </div>
+              {% endif %}
               <div class="d-flex justify-content-between py-2 border-top mt-2">
                 <span class="fw-bold fs-6">Grand Total:</span>
-                <span class="fw-bold fs-5 text-primary">{{ service.total_cost | currency }}</span>
+                <span class="fw-bold fs-5 text-primary font-monospace">{{ service.total_cost | currency }}</span>
               </div>
             </div>
           </div>
@@ -395,6 +862,13 @@
                 <small class="text-secondary">{{ service.tech_role or 'Technician' }}</small>
               </div>
             </div>
+            {% if current_user.role == 'Admin' %}
+            <div class="mt-3 pt-2 border-top">
+              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#messageTechModal">
+                <i class="fa-solid fa-comment-dots me-1"></i> Message Technician
+              </button>
+            </div>
+            {% endif %}
           {% else %}
             <span class="text-muted small">No technician assigned yet.</span>
           {% endif %}
@@ -403,7 +877,103 @@
     </div>
   </div>
 
+  <!-- =========================================================
+       Workflow Timeline & Audit History Section
+       ========================================================= -->
+  <div class="card fs-card mb-4 shadow-sm" id="workflow-timeline-section" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-timeline text-primary fs-5"></i>
+        <div>
+          <h5 class="fw-bold text-dark m-0">Workflow Timeline & Audit Trail</h5>
+          <small class="text-secondary">Timestamped log of status changes, parts reviews, duration estimates, admin schedules, and quality approvals</small>
+        </div>
+      </div>
+      <span class="badge bg-light text-primary border rounded-pill px-3 py-2">
+        {{ workflow_history|length }} Event(s) Recorded
+      </span>
+    </div>
+
+    <div class="card-body p-4 pt-2">
+      {% if workflow_history %}
+      <div class="timeline p-2">
+        {% for wh in workflow_history %}
+        <div class="d-flex mb-3 gap-3 position-relative">
+          <div class="text-center" style="width: 40px;">
+            <span class="badge rounded-circle p-2 {% if wh.action_role == 'Admin' %}bg-primary text-white{% elif wh.action_role == 'Spare Parts' %}bg-warning text-dark{% else %}bg-success text-white{% endif %} shadow-xs" style="width: 32px; height: 32px; line-height: 16px;">
+              {% if wh.action_role == 'Admin' %}
+                <i class="fa-solid fa-user-shield"></i>
+              {% elif wh.action_role == 'Spare Parts' %}
+                <i class="fa-solid fa-boxes-packing"></i>
+              {% else %}
+                <i class="fa-solid fa-wrench"></i>
+              {% endif %}
+            </span>
+          </div>
+          <div class="flex-fill bg-light p-3 rounded-3 border">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+              <div>
+                <strong class="text-dark">{{ wh.action_title }}</strong>
+                <span class="badge {% if wh.action_role == 'Admin' %}bg-primary{% elif wh.action_role == 'Spare Parts' %}bg-warning text-dark{% else %}bg-success{% endif %} rounded-pill px-2 py-0 ms-1" style="font-size: 0.7rem;">
+                  {{ wh.action_role }}
+                </span>
+                {% if wh.user_name %}<small class="text-muted ms-1">({{ wh.user_name }})</small>{% endif %}
+              </div>
+              <small class="text-muted font-monospace"><i class="fa-solid fa-clock me-1"></i>{{ wh.created_at | format_datetime }}</small>
+            </div>
+            {% if wh.comments %}
+            <p class="small text-secondary m-0 mb-1">{{ wh.comments }}</p>
+            {% endif %}
+            <div class="small">
+              <span class="badge bg-light text-secondary border font-monospace">{{ wh.from_status or 'Start' }}</span>
+              <i class="fa-solid fa-arrow-right mx-1 text-muted" style="font-size: 0.75rem;"></i>
+              <span class="badge bg-light text-primary border font-monospace">{{ wh.to_status }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 d-block"></i>
+        No workflow events logged for this work order yet.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
 </div>
+
+<!-- Admin Message to Tech Modal -->
+{% if current_user.role == 'Admin' and service.tech_name %}
+<div class="modal fade" id="messageTechModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header border-bottom pb-3">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="fa-solid fa-paper-plane text-primary me-2"></i>Send Dispatch Message to {{ service.tech_name }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('service_send_tech_message', record_id=service.id) }}" method="POST">
+        <div class="modal-body p-4">
+          <div class="p-2 bg-light rounded-3 mb-3 small text-secondary">
+            Work Order: <strong>{{ service.invoice_number }}</strong> &bull; Vehicle: <strong>{{ service.plate_number }}</strong>
+          </div>
+          <label class="form-label small fw-semibold text-secondary" for="admin-tech-msg">Dispatch Instructions / Note</label>
+          <textarea id="admin-tech-msg" name="message" class="form-control" rows="3" placeholder="Enter instructions, customer notes, or priority alerts for the technician..." required></textarea>
+        </div>
+        <div class="modal-footer border-top pt-3">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-paper-plane me-1"></i> Send Dispatch Alert
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

@@ -12,11 +12,6 @@
       <p class="text-secondary small m-0">Automated odometer and time-based maintenance rules for vehicles</p>
     </div>
     <div class="d-flex gap-2">
-      <form action="{{ url_for('reminders_scan') }}" method="POST" class="m-0">
-        <button type="submit" class="btn btn-outline-primary rounded-pill px-3 shadow-sm">
-          <i class="fa-solid fa-robot me-1"></i> Scan Due Services
-        </button>
-      </form>
       <a href="{{ url_for('schedule_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
         <i class="fa-solid fa-plus me-1"></i> Add Schedule Rule
       </a>

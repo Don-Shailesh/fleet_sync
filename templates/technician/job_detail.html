@@ -1,0 +1,1114 @@
+{% extends "base.html" %}
+
+{% block title %}Job Workbench {{ job.invoice_number }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('tech_jobs') }}" class="text-decoration-none">My Assigned Jobs</a></li>
+        <li class="breadcrumb-item active fw-bold font-monospace">{{ job.invoice_number }}</li>
+      </ol>
+    </nav>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('tech_jobs') }}" class="btn btn-sm btn-light border rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-arrow-left me-1"></i> Back to Queue
+      </a>
+      {% if service_report %}
+      <a href="{{ url_for('tech_job_report_view', job_id=job.id) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-file-circle-check me-1"></i> Certified Report
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Workflow Progress Stepper (6-Step Pipeline)
+       ========================================================= -->
+  {% set stage_meta = job.status | workflow_meta %}
+  <div class="card fs-card mb-4 p-3 shadow-sm border-0 bg-white" data-aos="fade-down">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-2 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge {{ stage_meta.badge_class }} rounded-pill px-3 py-1 fs-6">
+          <i class="{{ stage_meta.icon }} me-1"></i> Stage {{ stage_meta.stage }}: {{ stage_meta.name }}
+        </span>
+        <span class="text-secondary small">&bull; Action By: <strong class="text-dark">{{ stage_meta.responsible }}</strong></span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <a href="#workflow-timeline-section" class="btn btn-xs btn-outline-secondary rounded-pill px-3">
+          <i class="fa-solid fa-timeline me-1"></i> Audit Timeline ({{ workflow_history|length }})
+        </a>
+      </div>
+    </div>
+
+    <!-- Stepper Visual -->
+    <div class="d-none d-md-flex align-items-center justify-content-between px-2 pt-2">
+      <!-- Step 1: Inspection -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 1 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 1 %}text-primary{% else %}text-muted{% endif %}">1. Inspection & Parts</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 1 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 22px;"></div>
+
+      <!-- Step 2: Parts Review -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 2 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-boxes-packing"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 2 %}text-primary{% else %}text-muted{% endif %}">2. Parts Review</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 2 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 22px;"></div>
+
+      <!-- Step 3: Duration Estimate -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 3 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 3 %}text-primary{% else %}text-muted{% endif %}">3. Duration Estimate</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 3 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 22px;"></div>
+
+      <!-- Step 4: Admin Scheduling -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 4 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 4 %}text-primary{% else %}text-muted{% endif %}">4. Admin Schedule</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 4 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 22px;"></div>
+
+      <!-- Step 5: Repair & Admin Review -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 5 %}bg-primary text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-wrench"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 5 %}text-primary{% else %}text-muted{% endif %}">5. Repair Execution</div>
+      </div>
+      <div class="flex-fill border-top {% if stage_meta.stage > 5 %}border-primary border-2{% else %}border-light{% endif %}" style="margin-bottom: 22px;"></div>
+
+      <!-- Step 6: Final Report -->
+      <div class="text-center flex-fill position-relative">
+        <div class="badge rounded-circle p-2 mb-1 {% if stage_meta.stage >= 6 %}bg-success text-white{% else %}bg-light text-muted border{% endif %}" style="width: 36px; height: 36px; line-height: 20px;">
+          <i class="fa-solid fa-check-double"></i>
+        </div>
+        <div class="small fw-semibold {% if stage_meta.stage >= 6 %}text-success{% else %}text-muted{% endif %}">6. Final Report & Close</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reschedule Pending Notice Banner -->
+  {% if job.reschedule_requested %}
+  <div class="alert alert-warning border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center gap-3" data-aos="fade-down">
+    <i class="fa-solid fa-calendar-xmark fa-2x text-warning"></i>
+    <div>
+      <h6 class="fw-bold text-dark m-0">Appointment Reschedule Request Pending Admin Approval</h6>
+      <p class="small text-secondary mb-0">
+        Requested new date: <strong class="text-dark">{{ job.reschedule_date | format_date }}</strong> at <strong>{{ job.reschedule_time or '10:00:00' }}</strong> &bull; Reason: <em>"{{ job.reschedule_reason }}"</em>
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Parts Ready Notification Banner -->
+  {% set ns = namespace(parts_ready_count=0) %}
+  {% for pr in part_requests %}
+    {% if pr.status in ('Part Available', 'Issued', 'Approved') %}
+      {% set ns.parts_ready_count = ns.parts_ready_count + 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.parts_ready_count > 0 and job.status != 'Completed' %}
+  <div class="alert alert-success border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-boxes-packing fa-2x text-success"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">{{ ns.parts_ready_count }} Requested Spare Part(s) Ready for Collection!</h6>
+        <p class="small text-secondary mb-0">The Spare Parts Department has made components available at the counter. Collect parts and mark them received.</p>
+      </div>
+    </div>
+    <a href="#parts-section" class="btn btn-sm btn-success rounded-pill px-3">
+      <i class="fa-solid fa-hand-holding me-1"></i> View & Mark Received
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- =========================================================
+       DYNAMIC WORKFLOW STAGE ACTIONS & CALLOUT BANNERS
+       ========================================================= -->
+
+  <!-- Case 1: Pending or Accepted -> Prompt Inspection -->
+  {% if job.status in ('Pending', 'Accepted') %}
+  <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-clipboard-check fa-2x text-primary"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 1 Required: Inspect Vehicle & Record Diagnostic Findings</h6>
+        <p class="small text-secondary mb-0">Conduct the bay inspection, record problem symptoms and diagnostic findings, and requisition needed spare parts from warehouse.</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('tech_job_inspect', job_id=job.id) }}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+        <i class="fa-solid fa-magnifying-glass-chart me-1"></i> Record Vehicle Inspection & Parts
+      </a>
+    </div>
+  </div>
+
+  <!-- Case 2: Inspection Submitted / Parts Under Review -->
+  {% elif job.status in ('Inspection Submitted', 'Parts Under Review') %}
+  <div class="alert alert-info border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-boxes-packing fa-2x text-primary"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 2: Parts Under Review by Spare Parts Department</h6>
+        <p class="small text-secondary mb-0">Your requisition has been dispatched. The Spare Parts Department is checking stock and confirming supplier delivery lead times.</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#estimateDurationModal">
+        <i class="fa-solid fa-clock me-1"></i> Submit Duration Estimate
+      </button>
+    </div>
+  </div>
+
+  <!-- Case 3: Awaiting Parts -->
+  {% elif job.status in ('Awaiting Parts', 'Waiting for Parts') %}
+  <div class="alert alert-warning border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-truck-clock fa-2x text-warning"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Awaiting Supplier Parts Delivery (Lead Times Active)</h6>
+        <p class="small text-secondary mb-0">One or more requested components are on order with supplier. Estimated delivery dates are displayed below. You can submit your repair duration estimate now.</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#estimateDurationModal">
+        <i class="fa-solid fa-clock me-1"></i> {% if job.estimated_duration_hours %}Update Estimate ({{ job.estimated_duration_hours }} hrs){% else %}Submit Duration Estimate{% endif %}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#requestPartsModal">
+        <i class="fa-solid fa-plus me-1"></i> Request More Parts
+      </button>
+    </div>
+  </div>
+
+  <!-- Case 4: Ready to Schedule -->
+  {% elif job.status == 'Ready to Schedule' %}
+  <div class="alert alert-info border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-calendar-check fa-2x text-primary"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 3 Complete: Repair Duration Estimated ({{ job.estimated_duration_hours or 'N/A' }} Hours)</h6>
+        <p class="small text-secondary mb-0">Work order is ready for Admin scheduling and official repair authorization. You will be alerted when the schedule is authorized.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#estimateDurationModal">
+      <i class="fa-solid fa-pen me-1"></i> Edit Estimate ({{ job.estimated_duration_hours }} hrs)
+    </button>
+  </div>
+
+  <!-- Case 5: Scheduled -> Ready to Start Repair -->
+  {% elif job.status == 'Scheduled' %}
+  <div class="alert alert-success bg-success bg-opacity-10 border border-success border-opacity-25 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-calendar-day fa-2x text-success"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 4 Complete: Repair Authorized & Scheduled by Admin!</h6>
+        <p class="small text-secondary mb-0">
+          Planned Date: <strong class="text-dark">{{ job.appointment_date | format_date }}</strong> at <strong class="text-dark">{{ job.appointment_time or '10:00 AM' }}</strong>
+          {% if job.admin_schedule_notes %}&bull; Notes: <em>"{{ job.admin_schedule_notes }}"</em>{% endif %}
+        </p>
+      </div>
+    </div>
+    <form action="{{ url_for('tech_start_repair', job_id=job.id) }}" method="POST" class="m-0">
+      <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold">
+        <i class="fa-solid fa-play me-1"></i> Start Repair Work (In Progress)
+      </button>
+    </form>
+  </div>
+
+  <!-- Case 6: In Progress -->
+  {% elif job.status == 'In Progress' %}
+  <div class="alert alert-info border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-wrench fa-2x text-primary"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 5: Mechanical Repair In Progress &bull; Diagnostics Active</h6>
+        <p class="small text-secondary mb-0">Perform required mechanical procedures, review past history below, and submit for Admin quality approval when done.</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#putOnHoldModal">
+        <i class="fa-solid fa-pause me-1"></i> Pause (On Hold)
+      </button>
+      <button type="button" class="btn btn-success rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#completeRepairModal">
+        <i class="fa-solid fa-check-to-slot me-1"></i> Complete Repair & Submit for Admin Approval
+      </button>
+    </div>
+  </div>
+
+  <!-- Case 7: Awaiting Admin Approval -->
+  {% elif job.status == 'Awaiting Admin Approval' %}
+  <div class="alert alert-warning border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-user-clock fa-2x text-warning"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Awaiting Admin Quality Review & Approval</h6>
+        <p class="small text-secondary mb-0">Repair completed and submitted to Admin. Once approved, you will be invited to submit the final certified service report.</p>
+      </div>
+    </div>
+    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">In Admin Review</span>
+  </div>
+
+  <!-- Case 8: Revision Required -->
+  {% elif job.status == 'Revision Required' %}
+  <div class="alert alert-danger border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-triangle-exclamation fa-2x text-danger"></i>
+      <div>
+        <h6 class="fw-bold text-danger m-0">Admin Returned Work Order: Revision Required</h6>
+        <p class="small text-dark mb-0">
+          Admin Feedback: <strong class="text-danger">"{{ job.admin_review_comments or 'Please inspect and adjust repair procedures.' }}"</strong>
+        </p>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form action="{{ url_for('tech_start_repair', job_id=job.id) }}" method="POST" class="d-inline m-0">
+        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+          <i class="fa-solid fa-wrench me-1"></i> Re-open Bay Work
+        </button>
+      </form>
+      <button type="button" class="btn btn-sm btn-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#completeRepairModal">
+        <i class="fa-solid fa-rotate-left me-1"></i> Resubmit for Admin Review
+      </button>
+    </div>
+  </div>
+
+  <!-- Case 9: Approved - Pending Final Report -->
+  {% elif job.status == 'Approved - Pending Final Report' %}
+  <div class="alert alert-success border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" data-aos="fade-down">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-circle-check fa-2x text-success"></i>
+      <div>
+        <h6 class="fw-bold text-dark m-0">Step 6: Repair Approved by Admin! Final Report Required</h6>
+        <p class="small text-secondary mb-0">Admin approved completed work. Please complete the certified Final Repair Report (used parts, test results, vehicle condition) to close this job.</p>
+      </div>
+    </div>
+    <a href="{{ url_for('tech_job_report_form', job_id=job.id) }}" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold">
+      <i class="fa-solid fa-file-signature me-1"></i> Submit Certified Final Report
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Workbench Main Header Card -->
+  <div class="card fs-card mb-4 p-4 shadow-sm" data-aos="fade-up">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <span class="badge bg-light text-primary border font-monospace px-2 py-1 fs-6">
+            {{ job.invoice_number }}
+          </span>
+          {% if job.priority == 'Critical' %}
+            <span class="badge bg-danger rounded-pill px-2 py-1"><i class="fa-solid fa-fire me-1"></i>Critical Priority</span>
+          {% elif job.priority == 'High' %}
+            <span class="badge bg-warning text-dark rounded-pill px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>High Priority</span>
+          {% elif job.priority == 'Low' %}
+            <span class="badge bg-secondary rounded-pill px-2 py-1">Low Priority</span>
+          {% else %}
+            <span class="badge bg-info text-dark rounded-pill px-2 py-1">Medium Priority</span>
+          {% endif %}
+        </div>
+        <h3 class="fw-bold text-dark m-0">{{ job.service_type }}</h3>
+        <small class="text-secondary">
+          Scheduled: <strong class="text-dark">{{ job.appointment_date | format_date }}</strong> at <strong class="text-dark">{{ job.appointment_time or '10:00 AM' }}</strong>
+          &bull; Assigned Technician: <strong class="text-primary">{{ job.tech_name or 'You' }}</strong>
+          {% if job.estimated_duration_hours %}&bull; Duration: <strong class="text-info">{{ job.estimated_duration_hours }} hrs</strong>{% endif %}
+        </small>
+      </div>
+
+      <div class="text-end">
+        <!-- Current Status Badge -->
+        <div class="mb-2">
+          <span class="fs-badge {{ stage_meta.badge_class }} fs-6 py-2 px-3">
+            <span class="badge-dot"></span>{{ job.status }}
+          </span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 justify-content-end flex-wrap">
+          <a href="#vehicle-history-section" class="btn btn-sm btn-light border rounded-pill px-3 shadow-xs" title="Review past vehicle history">
+            <i class="fa-solid fa-clock-rotate-left me-1 text-primary"></i> Vehicle History <span class="badge bg-primary text-white rounded-pill ms-1">{{ vehicle_history|length }}</span>
+          </a>
+          <a href="#workflow-timeline-section" class="btn btn-sm btn-light border rounded-pill px-3 shadow-xs" title="View workflow audit trail">
+            <i class="fa-solid fa-timeline me-1 text-secondary"></i> Timeline <span class="badge bg-secondary text-white rounded-pill ms-1">{{ workflow_history|length }}</span>
+          </a>
+
+          {% if job.status in ('Pending', 'Accepted') %}
+            <a href="{{ url_for('tech_job_inspect', job_id=job.id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-xs">
+              <i class="fa-solid fa-clipboard-check me-1"></i> Inspect Vehicle
+            </a>
+          {% elif job.status == 'Scheduled' %}
+            <form action="{{ url_for('tech_start_repair', job_id=job.id) }}" method="POST" class="m-0">
+              <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs">
+                <i class="fa-solid fa-play me-1"></i> Start Repair
+              </button>
+            </form>
+          {% elif job.status == 'In Progress' %}
+            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#completeRepairModal">
+              <i class="fa-solid fa-check-to-slot me-1"></i> Complete & Submit for Review
+            </button>
+          {% elif job.status in ('Approved - Pending Final Report', 'Completed') %}
+            <a href="{{ url_for('tech_job_report_form', job_id=job.id) }}" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs">
+              <i class="fa-solid fa-file-signature me-1"></i> Final Report
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Description & Problem Concern Callout -->
+    <div class="row g-3">
+      {% if job.description %}
+      <div class="col-md-6">
+        <div class="p-3 bg-light rounded-3 h-100 border">
+          <span class="text-secondary small fw-semibold d-block mb-1">
+            <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> CUSTOMER PROBLEM CONCERN / ISSUE REPORTED
+          </span>
+          <p class="m-0 text-dark small fw-medium">{{ job.description }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="col-md-6">
+        <div class="p-3 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 h-100">
+          <span class="text-info-emphasis small fw-semibold d-block mb-1">
+            <i class="fa-solid fa-magnifying-glass-chart me-1"></i> DIAGNOSIS & WORKSHOP INSTRUCTIONS
+          </span>
+          <p class="m-0 text-dark small">{{ job.inspection_diagnosis or job.technician_notes or 'Intake inspection pending.' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Customer & Vehicle Details -->
+    <div class="col-lg-5" data-aos="fade-up">
+
+      <!-- Customer Contact Card -->
+      <div class="card fs-card mb-4 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-user-tie text-primary"></i>
+            <h6 class="fw-bold text-dark m-0">Customer & Location Details</h6>
+          </div>
+          <span class="badge bg-light text-secondary border rounded-pill">{{ job.customer_type or 'Fleet Account' }}</span>
+        </div>
+
+        <div class="card-body p-4 pt-2">
+          <h5 class="fw-bold text-dark m-0">{{ job.customer_name }}</h5>
+          {% if job.company_name %}
+            <p class="text-primary fw-semibold small mb-2">{{ job.company_name }}</p>
+          {% endif %}
+
+          <ul class="list-group list-group-flush small mb-3">
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+              <span class="text-secondary"><i class="fa-solid fa-phone me-2 text-primary"></i>Phone Number</span>
+              <a href="tel:{{ job.customer_phone }}" class="text-decoration-none fw-bold text-dark">{{ job.customer_phone }}</a>
+            </li>
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+              <span class="text-secondary"><i class="fa-solid fa-envelope me-2 text-primary"></i>Email Address</span>
+              <a href="mailto:{{ job.customer_email }}" class="text-decoration-none text-dark">{{ job.customer_email or 'N/A' }}</a>
+            </li>
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-start">
+              <span class="text-secondary"><i class="fa-solid fa-location-dot me-2 text-primary"></i>Service Address</span>
+              <span class="text-end text-dark fw-medium" style="max-width: 60%;">
+                {{ job.customer_address or '' }}
+                {% if job.customer_city %}<br>{{ job.customer_city }} {{ job.customer_postal or '' }}{% endif %}
+              </span>
+            </li>
+          </ul>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="tel:{{ job.customer_phone }}" class="btn btn-sm btn-outline-primary rounded-pill flex-fill">
+              <i class="fa-solid fa-phone me-1"></i> Call Customer
+            </a>
+            <a href="https://www.google.com/maps/search/?api=1&query={{ (job.customer_address or job.customer_city or '')|urlencode }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill">
+              <i class="fa-solid fa-location-arrow me-1"></i> Navigate
+            </a>
+            <button type="button" class="btn btn-sm btn-light border rounded-pill flex-fill" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+              <i class="fa-solid fa-calendar-plus me-1"></i> Reschedule Appt
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vehicle Specifications Card -->
+      <div class="card fs-card mb-4 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-car-side text-primary"></i>
+            <h6 class="fw-bold text-dark m-0">Vehicle Specifications</h6>
+          </div>
+          <span class="badge bg-light text-primary border font-monospace">{{ job.plate_number }}</span>
+        </div>
+
+        <div class="card-body p-4 pt-2">
+          <div class="row g-2 small">
+            <div class="col-6">
+              <span class="text-secondary d-block">Make & Model</span>
+              <strong class="text-dark">{{ job.make }} {{ job.model }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-secondary d-block">Year / Color</span>
+              <strong class="text-dark">{{ job.year }} &bull; {{ job.color or 'Standard' }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-secondary d-block">Vehicle Type / Fuel</span>
+              <strong class="text-dark">{{ job.vehicle_type or 'Passenger' }} &bull; {{ job.fuel_type or 'Petrol' }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-secondary d-block">Current Odometer</span>
+              <strong class="text-dark">{{ job.odometer | format_km }}</strong>
+            </div>
+            <div class="col-12 mt-2 pt-2 border-top">
+              <span class="text-secondary d-block" style="font-size: 0.75rem;">CHASSIS / VIN</span>
+              <span class="font-monospace text-dark fw-bold" style="font-size: 0.85rem;">{{ job.vin or 'NOT RECORDED' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Parts Requisitions & Service Report -->
+    <div class="col-lg-7" data-aos="fade-up">
+
+      <!-- Spare Parts Requisition & Lead Times Card -->
+      <div class="card fs-card mb-4 shadow-sm" id="parts-section">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-boxes-packing text-primary"></i>
+            <h5 class="fw-bold text-dark m-0">Spare Parts Pipeline & Lead Times</h5>
+          </div>
+          <div class="d-flex gap-2">
+            {% if job.status != 'Completed' %}
+            <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#requestPartsModal">
+              <i class="fa-solid fa-plus me-1"></i> Order Parts
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-body p-4 pt-2">
+          <div class="table-responsive">
+            <table class="table fs-table align-middle">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th class="text-center">Qty</th>
+                  <th>Availability & Lead Time</th>
+                  <th>Notes / Status</th>
+                  <th class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pr in part_requests %}
+                <tr>
+                  <td>
+                    <strong class="text-dark d-block">{{ pr.part_name }}</strong>
+                    {% if pr.part_number %}
+                      <small class="text-muted font-monospace">{{ pr.part_number }}</small>
+                    {% endif %}
+                  </td>
+                  <td class="text-center font-monospace">
+                    <span class="badge bg-light text-dark border">{{ pr.quantity_requested }}</span>
+                  </td>
+                  <td>
+                    {% if pr.status in ('Part Available', 'Approved') %}
+                      <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-check me-1"></i> In Stock ({{ pr.quantity_available }})
+                      </span>
+                    {% elif pr.status in ('Unavailable - Ordered', 'Not Available') %}
+                      <span class="badge bg-warning text-dark rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-truck-clock me-1"></i> On Order
+                      </span>
+                      {% if pr.estimated_delivery_date %}
+                        <small class="text-muted d-block font-monospace">ETA: {{ pr.estimated_delivery_date | format_date }}</small>
+                      {% endif %}
+                    {% elif pr.status == 'Clarification Requested' %}
+                      <span class="badge bg-info text-dark rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-circle-question me-1"></i> Clarification Needed
+                      </span>
+                    {% elif pr.status == 'Issued' %}
+                      <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-truck-ramp-box me-1"></i> Issued at Counter
+                      </span>
+                    {% elif pr.status == 'Received by Technician' %}
+                      <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-hand-holding me-1"></i> Received by Tech
+                      </span>
+                    {% elif pr.status == 'Used in Service' %}
+                      <span class="badge bg-light text-success border border-success rounded-pill px-2 py-1">
+                        <i class="fa-solid fa-wrench me-1"></i> Used in Service
+                      </span>
+                    {% else %}
+                      <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">{{ pr.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small class="text-secondary">{{ pr.parts_dept_notes or pr.technician_notes or '-' }}</small>
+                  </td>
+                  <td class="text-end">
+                    {% if pr.status in ('Part Available', 'Issued', 'Approved') and job.status != 'Completed' %}
+                      <form action="{{ url_for('parts_request_mark_received', request_id=pr.id) }}" method="POST" class="d-inline m-0">
+                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs" title="Confirm pickup & resume work">
+                          <i class="fa-solid fa-hand-holding me-1"></i> Mark Received
+                        </button>
+                      </form>
+                    {% else %}
+                      <span class="text-muted small">Logged</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-secondary">
+                    No spare parts requested for this job yet.
+                    {% if job.status != 'Completed' %}
+                    <div class="mt-2">
+                      <a href="{{ url_for('tech_job_inspect', job_id=job.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        <i class="fa-solid fa-clipboard-check me-1"></i> Inspect & Requisition Parts
+                      </a>
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Report Card -->
+      <div class="card fs-card mb-4 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-file-signature text-success"></i>
+            <h5 class="fw-bold text-dark m-0">Official Service & Diagnostic Report</h5>
+          </div>
+          {% if service_report %}
+            <a href="{{ url_for('tech_job_report_view', job_id=job.id) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+              <i class="fa-solid fa-print me-1"></i> View / Print Report
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="card-body p-4 pt-2">
+          {% if service_report %}
+            <div class="p-3 bg-light rounded-3 mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success text-white rounded-pill px-3 py-1">
+                  <i class="fa-solid fa-circle-check me-1"></i> Service Report Filed
+                </span>
+                <span class="text-muted small">Completed on: <strong>{{ service_report.completion_date | format_date }}</strong></span>
+              </div>
+
+              <div class="mb-2">
+                <strong class="text-dark small d-block">1. Problem Diagnosis:</strong>
+                <p class="text-secondary small mb-2">{{ service_report.diagnosis }}</p>
+              </div>
+
+              <div class="mb-2">
+                <strong class="text-dark small d-block">2. Work Performed:</strong>
+                <p class="text-secondary small mb-2">{{ service_report.work_performed }}</p>
+              </div>
+
+              <div class="mb-2">
+                <strong class="text-dark small d-block">3. Solution Provided:</strong>
+                <p class="text-secondary small mb-2">{{ service_report.solution_provided }}</p>
+              </div>
+
+              {% if service_report.parts_used_summary %}
+              <div class="mb-2">
+                <strong class="text-dark small d-block">4. Spare Parts Used:</strong>
+                <p class="text-secondary small mb-2">{{ service_report.parts_used_summary }}</p>
+              </div>
+              {% endif %}
+
+              {% if service_report.remarks %}
+              <div class="mb-2">
+                <strong class="text-dark small d-block">5. Service Remarks & Recommendations:</strong>
+                <p class="text-secondary small mb-2">{{ service_report.remarks }}</p>
+              </div>
+              {% endif %}
+
+              <!-- Before and After Photos -->
+              {% if service_report.before_image_url or service_report.after_image_url %}
+              <div class="row g-2 mt-2 pt-2 border-top">
+                {% if service_report.before_image_url %}
+                <div class="col-6">
+                  <span class="text-muted small d-block mb-1">Before Repair Photo</span>
+                  <img src="{{ service_report.before_image_url }}" alt="Before" class="img-fluid rounded border shadow-xs" style="max-height: 160px; width: 100%; object-fit: cover;">
+                </div>
+                {% endif %}
+                {% if service_report.after_image_url %}
+                <div class="col-6">
+                  <span class="text-muted small d-block mb-1">After Repair Photo</span>
+                  <img src="{{ service_report.after_image_url }}" alt="After" class="img-fluid rounded border shadow-xs" style="max-height: 160px; width: 100%; object-fit: cover;">
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <div class="mt-3 pt-2 border-top text-end">
+                <a href="{{ url_for('tech_job_report_form', job_id=job.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                  <i class="fa-solid fa-pen-to-square me-1"></i> Edit Report
+                </a>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-center py-4 bg-light rounded-3 p-4">
+              <i class="fa-solid fa-file-circle-question fa-3x text-muted mb-2 d-block"></i>
+              <h6 class="fw-bold text-dark">Final Service Report Pending</h6>
+              <p class="small text-secondary mb-3">
+                Technicians submit diagnosis, executed mechanical procedures, parts used, test results, and final vehicle handover condition.
+              </p>
+              {% if job.status in ('Approved - Pending Final Report', 'In Progress', 'Awaiting Admin Approval') %}
+              <a href="{{ url_for('tech_job_report_form', job_id=job.id) }}" class="btn btn-success rounded-pill px-4 shadow-sm">
+                <i class="fa-solid fa-file-signature me-1"></i> Complete Final Report
+              </a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Workflow Timeline & Audit History Section
+       ========================================================= -->
+  <div class="card fs-card mb-4 shadow-sm" id="workflow-timeline-section" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-timeline text-primary fs-5"></i>
+        <div>
+          <h5 class="fw-bold text-dark m-0">Workflow Timeline & Audit History</h5>
+          <small class="text-secondary">Timestamped record of status transitions, parts reviews, duration estimates, and admin authorizations</small>
+        </div>
+      </div>
+      <span class="badge bg-light text-primary border rounded-pill px-3 py-2">
+        {{ workflow_history|length }} Event(s) Logged
+      </span>
+    </div>
+
+    <div class="card-body p-4 pt-2">
+      {% if workflow_history %}
+      <div class="timeline p-2">
+        {% for wh in workflow_history %}
+        <div class="d-flex mb-3 gap-3 position-relative">
+          <div class="text-center" style="width: 40px;">
+            <span class="badge rounded-circle p-2 {% if wh.action_role == 'Admin' %}bg-primary text-white{% elif wh.action_role == 'Spare Parts' %}bg-warning text-dark{% else %}bg-success text-white{% endif %} shadow-xs" style="width: 32px; height: 32px; line-height: 16px;">
+              {% if wh.action_role == 'Admin' %}
+                <i class="fa-solid fa-user-shield"></i>
+              {% elif wh.action_role == 'Spare Parts' %}
+                <i class="fa-solid fa-boxes-packing"></i>
+              {% else %}
+                <i class="fa-solid fa-wrench"></i>
+              {% endif %}
+            </span>
+          </div>
+          <div class="flex-fill bg-light p-3 rounded-3 border">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+              <div>
+                <strong class="text-dark">{{ wh.action_title }}</strong>
+                <span class="badge {% if wh.action_role == 'Admin' %}bg-primary{% elif wh.action_role == 'Spare Parts' %}bg-warning text-dark{% else %}bg-success{% endif %} rounded-pill px-2 py-0 ms-1" style="font-size: 0.7rem;">
+                  {{ wh.action_role }}
+                </span>
+                {% if wh.user_name %}<small class="text-muted ms-1">({{ wh.user_name }})</small>{% endif %}
+              </div>
+              <small class="text-muted font-monospace"><i class="fa-solid fa-clock me-1"></i>{{ wh.created_at | format_datetime }}</small>
+            </div>
+            {% if wh.comments %}
+            <p class="small text-secondary m-0 mb-1">{{ wh.comments }}</p>
+            {% endif %}
+            <div class="small">
+              <span class="badge bg-light text-secondary border font-monospace">{{ wh.from_status or 'Start' }}</span>
+              <i class="fa-solid fa-arrow-right mx-1 text-muted" style="font-size: 0.75rem;"></i>
+              <span class="badge bg-light text-primary border font-monospace">{{ wh.to_status }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 d-block"></i>
+        No workflow events logged for this work order yet.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Complete Vehicle Service & Repair History Section
+       ========================================================= -->
+  <div class="card fs-card mb-4 shadow-sm" id="vehicle-history-section" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-primary fs-5"></i>
+        <div>
+          <h5 class="fw-bold text-dark m-0">Vehicle Past Service, Diagnostic & Parts History</h5>
+          <small class="text-secondary">Historical records, past problems, diagnoses, solutions, and components installed on this vehicle</small>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-primary border font-monospace px-3 py-2 rounded-pill fs-6">
+          <i class="fa-solid fa-car me-1"></i> {{ job.plate_number }}
+        </span>
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill">
+          {{ vehicle_history|length }} Past Service Record(s)
+        </span>
+      </div>
+    </div>
+
+    <div class="card-body p-4 pt-2">
+      {% if vehicle_history %}
+        <div class="table-responsive">
+          <table class="fs-table table-align-middle">
+            <thead>
+              <tr>
+                <th>Service Date & Odometer</th>
+                <th>Work Order & Service Type</th>
+                <th>Customer Problem Concern</th>
+                <th>Diagnosis & Work Performed</th>
+                <th>Past Parts Replaced</th>
+                <th>Technician</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for past in vehicle_history %}
+              <tr>
+                <!-- Service Date & Odometer -->
+                <td class="text-nowrap">
+                  <strong class="text-dark d-block">{{ past.service_date | format_date }}</strong>
+                  <small class="text-muted"><i class="fa-solid fa-gauge-simple me-1"></i>{{ past.odometer | format_km }}</small>
+                </td>
+
+                <!-- Work Order & Service Type -->
+                <td>
+                  <span class="badge bg-light text-primary border font-monospace mb-1">{{ past.invoice_number }}</span>
+                  <strong class="text-dark d-block small">{{ past.service_type }}</strong>
+                  {% if past.priority %}
+                    <span class="badge {% if past.priority == 'Critical' %}bg-danger{% elif past.priority == 'High' %}bg-warning text-dark{% else %}bg-light text-secondary border{% endif %} rounded-pill px-2 py-0" style="font-size: 0.65rem;">
+                      {{ past.priority }} Priority
+                    </span>
+                  {% endif %}
+                </td>
+
+                <!-- Customer Problem Concern -->
+                <td style="max-width: 220px;">
+                  {% if past.description %}
+                    <span class="small text-dark d-block">{{ past.description }}</span>
+                  {% else %}
+                    <span class="text-muted small">Standard Maintenance</span>
+                  {% endif %}
+                </td>
+
+                <!-- Diagnosis & Work Performed -->
+                <td style="max-width: 260px;">
+                  {% if past.past_diagnosis or past.past_work_performed or past.technician_notes %}
+                    <div class="small">
+                      {% if past.past_diagnosis %}
+                        <div class="mb-1">
+                          <strong class="text-danger small"><i class="fa-solid fa-magnifying-glass me-1"></i>Diagnosis:</strong>
+                          <span class="text-secondary">{{ past.past_diagnosis }}</span>
+                        </div>
+                      {% endif %}
+                      {% if past.past_work_performed %}
+                        <div class="mb-1">
+                          <strong class="text-success small"><i class="fa-solid fa-wrench me-1"></i>Work Done:</strong>
+                          <span class="text-secondary">{{ past.past_work_performed }}</span>
+                        </div>
+                      {% endif %}
+                      {% if past.past_solution %}
+                        <div>
+                          <strong class="text-info small"><i class="fa-solid fa-check me-1"></i>Solution:</strong>
+                          <span class="text-secondary">{{ past.past_solution }}</span>
+                        </div>
+                      {% endif %}
+                      {% if not past.past_diagnosis and past.technician_notes %}
+                        <div>
+                          <strong class="text-secondary small">Notes:</strong>
+                          <span class="text-secondary">{{ past.technician_notes }}</span>
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <span class="text-muted small">No diagnostic notes recorded</span>
+                  {% endif %}
+                </td>
+
+                <!-- Past Parts Replaced -->
+                <td style="max-width: 220px;">
+                  {% if past.past_parts_used %}
+                    <span class="small text-dark fw-medium d-block font-monospace">{{ past.past_parts_used }}</span>
+                  {% else %}
+                    <span class="text-muted small">Labor / Inspection only</span>
+                  {% endif %}
+                </td>
+
+                <!-- Past Technician Assigned -->
+                <td class="text-nowrap">
+                  {% if past.past_tech_name %}
+                    <span class="small fw-semibold text-dark d-block">{{ past.past_tech_name }}</span>
+                    {% if past.past_tech_code %}
+                      <small class="badge bg-light text-muted border font-monospace">{{ past.past_tech_code }}</small>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted small">Unassigned</span>
+                  {% endif %}
+                </td>
+
+                <!-- Historical Status Badge -->
+                <td class="text-center text-nowrap">
+                  {% if past.status == 'Completed' %}
+                    <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
+                  {% elif past.status == 'In Progress' %}
+                    <span class="badge bg-info bg-opacity-15 text-info-emphasis rounded-pill px-2 py-1">In Progress</span>
+                  {% elif past.status == 'Waiting for Parts' %}
+                    <span class="badge bg-warning bg-opacity-15 text-warning-emphasis rounded-pill px-2 py-1">Waiting Parts</span>
+                  {% else %}
+                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">{{ past.status }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fa-solid fa-clipboard-list fa-2x mb-2 d-block"></i>
+          This is the vehicle's first recorded service job in FleetSync. No previous repair history available.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- =========================================================
+     MODALS
+     ========================================================= -->
+
+<!-- Modal 1: Duration Estimate Modal -->
+<div class="modal fade" id="estimateDurationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <form action="{{ url_for('tech_job_estimate_duration', job_id=job.id) }}" method="POST">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-clock text-primary me-2"></i>Estimate Hands-on Repair Duration
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-secondary mb-3">
+            Review part availability and lead times, then enter your estimated hands-on repair duration. This will be submitted to the Admin for final scheduling and authorization.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary" for="estimated_duration_hours">
+              Estimated Hands-on Repair Duration (Hours) <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.25" min="0.25" max="100" class="form-control" id="estimated_duration_hours" name="estimated_duration_hours" 
+                     value="{{ job.estimated_duration_hours or '2.5' }}" required placeholder="e.g. 3.5">
+              <span class="input-group-text">hours</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary" for="estimate_notes">
+              Technician Notes / Bay Requirements (Optional)
+            </label>
+            <textarea class="form-control" id="estimate_notes" name="estimate_notes" rows="2" 
+                      placeholder="e.g. Will require 2-post lift and wheel alignment bay once strut parts arrive.">{{ job.technician_notes or '' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-paper-plane me-1"></i> Submit Estimate to Admin
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Complete Repair & Submit for Admin Approval Modal -->
+<div class="modal fade" id="completeRepairModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <form action="{{ url_for('tech_complete_repair', job_id=job.id) }}" method="POST">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-check-to-slot text-success me-2"></i>Complete Repair & Submit for Admin Review
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-secondary mb-3">
+            Confirm that all mechanical repair procedures have been completed in the bay. Submitting will notify the Admin for quality review and authorization of the final certified report.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary" for="repair_completion_notes">
+              Repair Completion Notes & Observations <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" id="repair_completion_notes" name="repair_completion_notes" rows="3" required
+                      placeholder="e.g. All replacement components seated and torqued. System bled and initial road test verified clean operation. Ready for Admin inspection.">{{ job.technician_notes or '' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-paper-plane me-1"></i> Submit for Admin Review
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Put On Hold Modal -->
+<div class="modal fade" id="putOnHoldModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <form action="{{ url_for('tech_job_status_update', job_id=job.id) }}" method="POST">
+        <input type="hidden" name="status" value="On Hold">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-pause text-secondary me-2"></i>Pause Repair (Put On Hold)
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-secondary mb-3">
+            Temporarily pause work on this vehicle. You can resume at any time.
+          </p>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-secondary rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-pause me-1"></i> Put On Hold
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Request More Parts Modal -->
+<div class="modal fade" id="requestPartsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <form action="{{ url_for('tech_job_request_part', job_id=job.id) }}" method="POST">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-boxes-packing text-warning me-2"></i>Order Required Spare Part
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Component Name <span class="text-danger">*</span></label>
+            <input type="text" name="part_name" class="form-control" list="techPartsCatalogList" required placeholder="e.g. Brake Caliper Guide Pins, Synthetic Oil...">
+            <datalist id="techPartsCatalogList">
+              {% for cp in catalog_parts %}
+                <option value="{{ cp.part_name }}">{{ cp.part_number }} &bull; Stock: {{ cp.quantity }}</option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Part Number (Optional)</label>
+              <input type="text" name="part_number" class="form-control" placeholder="e.g. SP-BRK-009">
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Quantity <span class="text-danger">*</span></label>
+              <input type="number" name="quantity_requested" class="form-control text-center" value="1" min="1" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Urgency / Priority</label>
+            <select name="priority" class="form-select">
+              <option value="Standard" selected>Standard</option>
+              <option value="Urgent">Urgent (Bay Blocked)</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Reason / Diagnostic Notes</label>
+            <textarea name="technician_notes" class="form-control" rows="2" placeholder="Explain why component is needed..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning text-dark rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fa-solid fa-paper-plane me-1"></i> Send Request to Parts Dept
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 5: Appointment Reschedule Modal -->
+<div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <form action="{{ url_for('tech_job_reschedule', job_id=job.id) }}" method="POST">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-calendar-plus text-primary me-2"></i>Request Appointment Reschedule
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Proposed Appointment Date <span class="text-danger">*</span></label>
+            <input type="date" name="reschedule_date" class="form-control" required value="{{ job.appointment_date }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Proposed Time</label>
+            <input type="time" name="reschedule_time" class="form-control" value="{{ job.appointment_time or '10:00' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Reason for Rescheduling <span class="text-danger">*</span></label>
+            <textarea name="reschedule_reason" class="form-control" rows="3" required placeholder="e.g. Waiting for specialized suspension press tool / Customer unavailable..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-paper-plane me-1"></i> Submit Reschedule Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

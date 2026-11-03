@@ -161,15 +161,19 @@
                 <th>Vehicle</th>
                 <th>Date</th>
                 <th>Service Type</th>
+                <th>Technician</th>
                 <th>Status</th>
+                {% if session.get('user_role') != 'Technician' %}
                 <th>Amount</th>
+                {% endif %}
+                <th class="text-end">Report</th>
               </tr>
             </thead>
             <tbody>
               {% for s in services %}
               <tr>
                 <td>
-                  <a href="{{ url_for('service_detail', record_id=s.id) }}" class="fw-bold text-primary text-decoration-none">
+                  <a href="{{ url_for('tech_job_detail', job_id=s.id) if session.get('user_role') == 'Technician' else url_for('service_detail', record_id=s.id) }}" class="fw-bold text-primary text-decoration-none">
                     {{ s.invoice_number }}
                   </a>
                 </td>
@@ -177,17 +181,42 @@
                 <td>{{ s.service_date | format_date }}</td>
                 <td><span class="badge bg-light text-dark border">{{ s.service_type }}</span></td>
                 <td>
+                  <span class="text-dark small"><i class="fa-solid fa-user-gear text-muted me-1"></i>{{ s.tech_name or 'Unassigned' }}</span>
+                </td>
+                <td>
                   {% if s.status == 'Completed' %}
                     <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Completed</span>
+                  {% elif s.status == 'In Progress' %}
+                    <span class="badge bg-info bg-opacity-15 text-info rounded-pill px-2">In Progress</span>
+                  {% elif s.status == 'Waiting for Parts' %}
+                    <span class="badge bg-warning bg-opacity-20 text-warning-emphasis rounded-pill px-2">Waiting Parts</span>
+                  {% elif s.status == 'Accepted' %}
+                    <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2">Accepted</span>
                   {% else %}
-                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">{{ s.status }}</span>
+                    <span class="badge bg-light text-secondary border rounded-pill px-2">{{ s.status }}</span>
                   {% endif %}
                 </td>
+                {% if session.get('user_role') != 'Technician' %}
                 <td class="fw-bold">{{ s.total_cost | currency }}</td>
+                {% endif %}
+                <td class="text-end">
+                  <div class="d-flex gap-1 justify-content-end">
+                    {% if session.get('user_role') != 'Technician' %}
+                    <a href="{{ url_for('service_invoice', record_id=s.id) }}" target="_blank" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 shadow-xs" title="Print Customer Invoice">
+                      <i class="fa-solid fa-file-invoice me-1"></i> Bill
+                    </a>
+                    {% endif %}
+                    {% if s.report_id %}
+                      <a href="{{ url_for('tech_job_report_view', job_id=s.id) }}" target="_blank" class="btn btn-xs btn-outline-success rounded-pill px-2 py-1 shadow-xs" title="View Certified Report">
+                        <i class="fa-solid fa-file-signature me-1"></i> View Report
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
               </tr>
               {% else %}
               <tr>
-                <td colspan="6" class="text-center py-4 text-secondary">
+                <td colspan="8" class="text-center py-4 text-secondary">
                   No past service records logged.
                 </td>
               </tr>

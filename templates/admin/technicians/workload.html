@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Workload: {{ tech.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_technicians') }}" class="text-decoration-none">Technicians Management</a></li>
+        <li class="breadcrumb-item active fw-bold">{{ tech.name }}</li>
+      </ol>
+    </nav>
+  </div>
+
+  <!-- Technician Profile Header Card -->
+  <div class="card fs-card mb-4 p-4 shadow-sm" data-aos="fade-up">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle bg-primary bg-opacity-15 text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; font-size: 1.5rem; flex-shrink: 0;">
+          {{ tech.name[:2]|upper }}
+        </div>
+        <div>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <h3 class="fw-bold text-dark m-0">{{ tech.name }}</h3>
+            {% if tech.technician_code %}
+              <span class="badge bg-light text-primary border font-monospace px-2 py-1 fs-6">
+                {{ tech.technician_code }}
+              </span>
+            {% endif %}
+            {% if tech.status == 'Active' %}
+              <span class="badge bg-success rounded-pill px-2 py-1">Active Account</span>
+            {% else %}
+              <span class="badge bg-danger rounded-pill px-2 py-1">Deactivated</span>
+            {% endif %}
+
+            <div class="dropdown d-inline-block">
+              <button class="btn btn-sm dropdown-toggle rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs border {% if tech.availability_status == 'Available' %}btn-outline-success bg-success bg-opacity-10 text-success border-success border-opacity-25{% elif tech.availability_status == 'Busy' %}btn-outline-warning bg-warning bg-opacity-10 text-warning border-warning border-opacity-25{% else %}btn-outline-secondary bg-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25{% endif %}"
+                      type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Click to change duty status">
+                {% if tech.availability_status == 'Available' %}
+                  <i class="fa-solid fa-circle-check text-success me-1"></i> Available on Duty
+                {% elif tech.availability_status == 'Busy' %}
+                  <i class="fa-solid fa-clock text-warning me-1"></i> Busy on Work Order
+                {% else %}
+                  <i class="fa-solid fa-mug-hot text-secondary me-1"></i> On Leave
+                {% endif %}
+              </button>
+              <ul class="dropdown-menu shadow border-0 rounded-3 p-2" style="min-width: 190px;">
+                <li class="dropdown-header small text-uppercase fw-bold text-muted px-2 py-1">Change Duty Status</li>
+                <li>
+                  <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                    <input type="hidden" name="availability_status" value="Available">
+                    <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'Available' %}active bg-success text-white fw-bold{% endif %}">
+                      <span><i class="fa-solid fa-circle-check text-success me-2 {% if tech.availability_status == 'Available' %}text-white{% endif %}"></i> Available</span>
+                      {% if tech.availability_status == 'Available' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                    </button>
+                  </form>
+                </li>
+                <li>
+                  <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                    <input type="hidden" name="availability_status" value="Busy">
+                    <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'Busy' %}active bg-warning text-dark fw-bold{% endif %}">
+                      <span><i class="fa-solid fa-clock text-warning me-2 {% if tech.availability_status == 'Busy' %}text-dark{% endif %}"></i> Busy / On Job</span>
+                      {% if tech.availability_status == 'Busy' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                    </button>
+                  </form>
+                </li>
+                <li>
+                  <form action="{{ url_for('admin_technician_duty_status', tech_id=tech.id) }}" method="POST" class="m-0">
+                    <input type="hidden" name="availability_status" value="On Leave">
+                    <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if tech.availability_status == 'On Leave' %}active bg-secondary text-white fw-bold{% endif %}">
+                      <span><i class="fa-solid fa-mug-hot text-secondary me-2 {% if tech.availability_status == 'On Leave' %}text-white{% endif %}"></i> On Leave</span>
+                      {% if tech.availability_status == 'On Leave' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p class="text-secondary small m-0">
+            <strong class="text-dark">{{ tech.specialization or 'Certified Automotive Technician' }}</strong> &bull;
+            {% if tech.phone %}
+              <a href="tel:{{ tech.phone }}" class="text-success text-decoration-none fw-semibold me-2"><i class="fa-solid fa-phone me-1"></i>{{ tech.phone }}</a>
+            {% endif %}
+            <a href="mailto:{{ tech.email }}" class="text-primary text-decoration-none me-2"><i class="fa-solid fa-envelope me-1"></i>{{ tech.email }}</a>
+            {% if tech.address %}
+              <span class="text-muted"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ tech.address }}</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('admin_technician_edit', tech_id=tech.id) }}" class="btn btn-sm btn-light border rounded-pill px-3 shadow-xs">
+          <i class="fa-solid fa-pen-to-square me-1"></i> Edit Profile
+        </a>
+        <a href="{{ url_for('service_create') }}?tech_id={{ tech.id }}" class="btn btn-sm btn-fs-primary rounded-pill px-4 shadow-sm">
+          <i class="fa-solid fa-plus me-1"></i> Assign Work Order
+        </a>
+      </div>
+    </div>
+
+    {% if tech.skills %}
+    <div class="mt-3 pt-3 border-top d-flex align-items-center gap-2 flex-wrap">
+      <span class="small fw-semibold text-secondary text-uppercase" style="font-size: 0.75rem;">Skills & Tool Competencies:</span>
+      {% for s in tech.skills.split(',') %}
+        <span class="badge bg-light text-dark border rounded-pill small px-2 py-1">{{ s.strip() }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Performance KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+      <div class="card fs-card p-3 shadow-xs text-center">
+        <span class="text-secondary small fw-semibold text-uppercase">Total Assigned</span>
+        <h3 class="fw-bold text-primary m-0 mt-1">{{ stats.total_assigned }}</h3>
+        <small class="text-muted">Lifetime jobs assigned</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card fs-card p-3 shadow-xs text-center">
+        <span class="text-secondary small fw-semibold text-uppercase">In Progress / Ongoing</span>
+        <h3 class="fw-bold text-warning m-0 mt-1">{{ stats.ongoing_count }}</h3>
+        <small class="text-muted">Currently active repairs</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card fs-card p-3 shadow-xs text-center">
+        <span class="text-secondary small fw-semibold text-uppercase">Completed Work Orders</span>
+        <h3 class="fw-bold text-success m-0 mt-1">{{ stats.completed_count }}</h3>
+        <small class="text-muted">Successfully certified & closed</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card fs-card p-3 shadow-xs text-center">
+        <span class="text-secondary small fw-semibold text-uppercase">Customer Satisfaction</span>
+        <h3 class="fw-bold text-dark m-0 mt-1">
+          {% if stats.avg_rating %}
+            {{ stats.avg_rating }} <i class="fa-solid fa-star text-warning fa-xs"></i>
+          {% else %}
+            5.0 <i class="fa-solid fa-star text-warning fa-xs"></i>
+          {% endif %}
+        </h3>
+        <small class="text-muted">Based on verified feedback</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1: Assigned Service Jobs Table -->
+  <div class="card fs-card mb-4 overflow-hidden shadow-sm">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Assigned Service Records & Work Orders</h5>
+        <small class="text-secondary">Historical and ongoing repair records assigned to {{ tech.name }}</small>
+      </div>
+      <span class="badge bg-light text-primary border rounded-pill px-3 py-2">
+        {{ jobs|length }} Assigned Work Order(s)
+      </span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fs-table table-align-middle">
+        <thead>
+          <tr>
+            <th>Work Order #</th>
+            <th>Customer</th>
+            <th>Vehicle Asset</th>
+            <th>Service Type</th>
+            <th>Priority</th>
+            <th>Appointment</th>
+            <th class="text-center">Status</th>
+            <th class="text-end">Cost</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td class="font-monospace fw-bold text-primary">{{ job.invoice_number }}</td>
+            <td>
+              <span class="fw-semibold text-dark d-block">{{ job.customer_name }}</span>
+              {% if job.customer_phone %}<small class="text-muted">{{ job.customer_phone }}</small>{% endif %}
+            </td>
+            <td>
+              <span class="font-monospace fw-bold d-block">{{ job.plate_number }}</span>
+              <small class="text-secondary">{{ job.year }} {{ job.make }} {{ job.model }}</small>
+            </td>
+            <td>
+              <strong class="text-dark small d-block">{{ job.service_type }}</strong>
+              {% if job.description %}<span class="text-muted small text-truncate d-inline-block" style="max-width: 180px;">{{ job.description }}</span>{% endif %}
+            </td>
+            <td>
+              {% if job.priority == 'Critical' %}
+                <span class="badge bg-danger rounded-pill px-2 py-1"><i class="fa-solid fa-fire me-1"></i>Critical</span>
+              {% elif job.priority == 'High' %}
+                <span class="badge bg-warning text-dark rounded-pill px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>High</span>
+              {% elif job.priority == 'Low' %}
+                <span class="badge bg-secondary rounded-pill px-2 py-1">Low</span>
+              {% else %}
+                <span class="badge bg-info text-dark rounded-pill px-2 py-1">Medium</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="d-block small fw-semibold text-dark">{{ job.appointment_date | format_date }}</span>
+              <small class="text-secondary">{{ job.appointment_time or '10:00 AM' }}</small>
+            </td>
+            <td class="text-center">
+              {% if job.status == 'Accepted' %}
+                <span class="fs-badge badge-accepted"><span class="badge-dot"></span>Accepted</span>
+              {% elif job.status == 'In Progress' %}
+                <span class="fs-badge badge-inservice"><span class="badge-dot"></span>In Progress</span>
+              {% elif job.status == 'Waiting for Parts' %}
+                <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Waiting for Parts</span>
+              {% elif job.status == 'On Hold' %}
+                <span class="fs-badge badge-priority-low"><span class="badge-dot"></span>On Hold</span>
+              {% elif job.status == 'Completed' %}
+                <span class="fs-badge badge-active"><span class="badge-dot"></span>Completed</span>
+              {% elif job.status == 'Cancelled' %}
+                <span class="fs-badge badge-inactive"><span class="badge-dot"></span>Cancelled</span>
+              {% else %}
+                <span class="fs-badge badge-unpaid"><span class="badge-dot"></span>Pending</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold text-dark">{{ job.total_cost | currency }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('service_detail', record_id=job.id) }}" class="btn btn-sm btn-light border rounded-pill px-2 py-1 shadow-xs" title="View Work Order">
+                <i class="fa-solid fa-eye me-1"></i> View
+              </a>
+              {% if job.report_id %}
+                <a href="{{ url_for('tech_job_report_view', job_id=job.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 shadow-xs" title="View Certified Report">
+                  <i class="fa-solid fa-file-signature me-1"></i> Report
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-4 text-muted">
+              No service records assigned to {{ tech.name }} yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 2: Technician Parts Requisitions History -->
+  {% if part_requests %}
+  <div class="card fs-card mb-4 overflow-hidden shadow-sm">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Spare Parts Requisitions Pipeline</h5>
+        <small class="text-secondary">Components requested from warehouse for assigned work orders</small>
+      </div>
+      <span class="badge bg-light text-secondary border rounded-pill px-3 py-2">
+        {{ part_requests|length }} Requisition(s)
+      </span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fs-table table-align-middle">
+        <thead>
+          <tr>
+            <th>Requisition #</th>
+            <th>Work Order</th>
+            <th>Component Details</th>
+            <th class="text-center">Qty Requested</th>
+            <th class="text-center">Status</th>
+            <th>Requested Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pr in part_requests %}
+          <tr>
+            <td class="font-monospace fw-bold text-primary">#REQ-{{ pr.id }}</td>
+            <td class="font-monospace">{{ pr.invoice_number }} ({{ pr.plate_number }})</td>
+            <td>
+              <strong class="text-dark d-block">{{ pr.part_name }}</strong>
+              {% if pr.part_number %}<small class="text-muted font-monospace">{{ pr.part_number }}</small>{% endif %}
+            </td>
+            <td class="text-center fw-bold">{{ pr.quantity_requested }}</td>
+            <td class="text-center">
+              {% if pr.status == 'Issued' %}
+                <span class="badge bg-success px-2 py-1 rounded-pill">Issued</span>
+              {% elif pr.status == 'Part Available' %}
+                <span class="badge bg-info text-dark px-2 py-1 rounded-pill">Part Available</span>
+              {% elif pr.status == 'Used in Service' %}
+                <span class="badge bg-primary px-2 py-1 rounded-pill">Used in Service</span>
+              {% elif pr.status == 'Not Available' or pr.status == 'Rejected' %}
+                <span class="badge bg-danger px-2 py-1 rounded-pill">Not Available</span>
+              {% else %}
+                <span class="badge bg-warning text-dark px-2 py-1 rounded-pill">Pending</span>
+              {% endif %}
+            </td>
+            <td class="small text-secondary">{{ pr.requested_at | format_date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

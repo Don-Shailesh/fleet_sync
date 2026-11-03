@@ -58,25 +58,46 @@
                 <select id="wo-tech" name="user_id" class="form-select">
                   <option value="">Unassigned</option>
                   {% for t in technicians %}
-                    <option value="{{ t.id }}" {% if service and service.user_id == t.id %}selected{% endif %}>
-                      {{ t.name }} ({{ t.role }})
+                    <option value="{{ t.id }}" {% if (service and service.user_id == t.id) or (not service and request.args.get('tech_id', type=int) == t.id) %}selected{% endif %}>
+                      {{ t.name }} [{{ t.availability_status or 'Available' }}]{% if t.specialization %} - {{ t.specialization }}{% elif t.skills %} - {{ t.skills[:30] }}...{% endif %}
                     </option>
                   {% endfor %}
                 </select>
+                <small class="text-secondary" style="font-size: 0.75rem;">Duty availability shown in brackets.</small>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label" for="wo-date">Service Date <span class="text-danger">*</span></label>
                 <input type="date" id="wo-date" name="service_date" class="form-control" value="{{ service.service_date if service else now.strftime('%Y-%m-%d') }}" required>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-3">
+                <label class="form-label" for="wo-appt-date">Appointment Date</label>
+                <input type="date" id="wo-appt-date" name="appointment_date" class="form-control" value="{{ service.appointment_date if service and service.appointment_date else (service.service_date if service else now.strftime('%Y-%m-%d')) }}">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label" for="wo-appt-time">Appointment Time</label>
+                <input type="time" id="wo-appt-time" name="appointment_time" class="form-control" value="{{ service.appointment_time if service and service.appointment_time else '10:00' }}">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label" for="wo-priority">Job Priority</label>
+                <select id="wo-priority" name="priority" class="form-select fw-semibold">
+                  <option value="Critical" {% if service and service.priority == 'Critical' %}selected{% endif %}>🔴 Critical Priority</option>
+                  <option value="High" {% if service and service.priority == 'High' %}selected{% endif %}>🟠 High Priority</option>
+                  <option value="Medium" {% if not service or service.priority == 'Medium' %}selected{% endif %}>🔵 Medium Priority</option>
+                  <option value="Low" {% if service and service.priority == 'Low' %}selected{% endif %}>⚪ Low Priority</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
                 <label class="form-label" for="work-order-odometer-input">Current Odometer (km) <span class="text-danger">*</span></label>
                 <input type="number" id="work-order-odometer-input" name="odometer" class="form-control" value="{{ service.odometer if service else 0 }}" min="0" required>
                 <small id="odometer-last-reading-hint" class="text-secondary" style="font-size: 0.75rem;">Recorded vehicle mileage.</small>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label" for="wo-type">Service Category</label>
                 <select id="wo-type" name="service_type" class="form-select">
                   {% for st in ['Preventive Maintenance', 'Brake System Overhaul', 'Tire Replacement & Balancing', 'Suspension & Steering', 'Engine Diagnostic & Tune-up', 'Transmission Service', 'Electrical & Battery', 'HVAC Air Conditioning', 'Commercial DOT Inspection', 'Emergency Repair'] %}
@@ -88,7 +109,7 @@
               <div class="col-md-6">
                 <label class="form-label" for="wo-status">Job Status</label>
                 <select id="wo-status" name="status" class="form-select">
-                  {% for stat in ['In Progress', 'Waiting for Parts', 'Completed', 'Pending', 'Cancelled'] %}
+                  {% for stat in ['Pending', 'Accepted', 'In Progress', 'Waiting for Parts', 'On Hold', 'Completed', 'Cancelled'] %}
                     <option value="{{ stat }}" {% if service and service.status == stat %}selected{% endif %}>{{ stat }}</option>
                   {% endfor %}
                 </select>
