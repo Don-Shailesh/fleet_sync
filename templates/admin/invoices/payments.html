@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Paid & Payment Management - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <!-- Breadcrumb & Top Bar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('invoice_report') }}" class="text-decoration-none">Billing & Invoices</a></li>
+          <li class="breadcrumb-item active fw-bold">Invoice Paid</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2 mt-1">
+        <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
+          <i class="fa-solid fa-money-check-dollar me-1"></i> Payment Settlement
+        </span>
+        <h3 class="fw-bold text-dark m-0">Current Invoices & Payment Settlement</h3>
+      </div>
+      <p class="text-secondary small m-0">Review current and latest invoices, easily submit customer payments, and toggle invoices between Paid and Unpaid</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('invoice_report') }}" class="btn btn-outline-primary rounded-pill px-3 shadow-xs">
+        <i class="fa-solid fa-file-invoice-dollar me-1"></i> Full Invoice Ledger
+      </a>
+      <a href="{{ url_for('service_create') }}" class="btn btn-fs-primary rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-plus me-1"></i> New Work Order
+      </a>
+    </div>
+  </div>
+
+  <!-- Key Financial & Payment Metrics Row -->
+  <div class="row g-3 mb-4">
+    <!-- Total Invoices -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="50">
+      <div class="card fs-card stat-card h-100 p-3 border-start border-4 border-primary">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Total Current Invoices</span>
+            <h2 class="fw-bold text-dark mt-1 mb-0">{{ total_invoices }}</h2>
+            <div class="small text-muted mt-1">{{ total_billed | currency }} Total Billed</div>
+          </div>
+          <div class="stat-icon primary">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settled / Paid Invoices -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="100">
+      <div class="card fs-card stat-card h-100 p-3 border-start border-4 border-success">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Settled Invoices (Paid)</span>
+            <h2 class="fw-bold text-success mt-1 mb-0">{{ paid_count }}</h2>
+            <div class="small text-success mt-1">
+              <i class="fa-solid fa-circle-check me-1"></i> {{ total_paid | currency }} Collected
+            </div>
+          </div>
+          <div class="stat-icon success">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unpaid / Due Invoices -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="150">
+      <div class="card fs-card stat-card h-100 p-3 border-start border-4 border-danger">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Unpaid Invoices (Due)</span>
+            <h2 class="fw-bold {% if unpaid_count > 0 %}text-danger{% else %}text-muted{% endif %} mt-1 mb-0">{{ unpaid_count }}</h2>
+            <div class="small {% if total_unpaid > 0 %}text-danger{% else %}text-muted{% endif %} mt-1">
+              <i class="fa-solid fa-clock me-1"></i> {{ total_unpaid | currency }} Outstanding
+            </div>
+          </div>
+          <div class="stat-icon {% if unpaid_count > 0 %}danger{% else %}warning{% endif %}">
+            <i class="fa-solid fa-file-circle-exclamation"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settlement Clearance Rate -->
+    <div class="col-sm-6 col-xl-3" data-aos="fade-up" data-aos-delay="200">
+      <div class="card fs-card stat-card h-100 p-3 border-start border-4 border-info">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Clearance Rate</span>
+            <h2 class="fw-bold text-info mt-1 mb-0">
+              {% if total_invoices > 0 %}{{ (paid_count / total_invoices * 100)|round(1) }}%{% else %}100%{% endif %}
+            </h2>
+            <div class="small text-muted mt-1">Settled vs Total Invoices</div>
+          </div>
+          <div class="stat-icon info">
+            <i class="fa-solid fa-percent"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Card -->
+  <div class="card fs-card mb-4 shadow-sm" data-aos="fade-up">
+    <div class="card-body p-4 pt-3">
+      <form method="GET" action="{{ url_for('admin_invoice_payments') }}" class="row g-3 align-items-end">
+        
+        <!-- Search Keyword -->
+        <div class="col-md-5">
+          <label class="form-label small fw-semibold text-secondary mb-1" for="filter-search">
+            <i class="fa-solid fa-magnifying-glass me-1 text-muted"></i> Search Invoice Number, Customer, or Vehicle Plate
+          </label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-receipt"></i></span>
+            <input type="text" id="filter-search" name="search" class="form-control border-start-0" 
+                   placeholder="e.g. WO-2026-9872, MH12, Sharma, Bolero..." value="{{ search }}">
+          </div>
+        </div>
+
+        <!-- Payment Status Filter -->
+        <div class="col-sm-6 col-md-3">
+          <label class="form-label small fw-semibold text-secondary mb-1" for="filter-status">Payment Status</label>
+          <select id="filter-status" name="status" class="form-select">
+            <option value="All" {% if not status_filter or status_filter == 'All' %}selected{% endif %}>All Payment States</option>
+            <option value="Unpaid" {% if status_filter == 'Unpaid' %}selected{% endif %}>🔴 Unpaid Invoices Only</option>
+            <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>🟢 Paid Invoices Only</option>
+            <option value="Partially Paid" {% if status_filter == 'Partially Paid' %}selected{% endif %}>🟡 Partially Paid</option>
+          </select>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="col-sm-6 col-md-2">
+          <label class="form-label small fw-semibold text-secondary mb-1" for="filter-date">Timeframe</label>
+          <select id="filter-date" name="date_filter" class="form-select">
+            <option value="All" {% if not date_filter or date_filter == 'All' %}selected{% endif %}>All Time</option>
+            <option value="Today" {% if date_filter == 'Today' %}selected{% endif %}>Today</option>
+            <option value="This Month" {% if date_filter == 'This Month' %}selected{% endif %}>This Month</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100 shadow-sm" title="Apply Filter">
+            <i class="fa-solid fa-filter me-1"></i> Filter
+          </button>
+          <a href="{{ url_for('admin_invoice_payments') }}" class="btn btn-light border px-3" title="Clear Filters">
+            <i class="fa-solid fa-rotate-left"></i>
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Current Invoices Table Card -->
+  <div class="card fs-card overflow-hidden shadow-sm" data-aos="fade-up">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold text-dark m-0">Current Invoices & Settlement Ledger</h5>
+        <small class="text-secondary">Showing latest invoices sorted by newest record first. Easily submit payments or revert to unpaid.</small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">Showing {{ invoices|length }} Current Invoice(s)</span>
+      </div>
+    </div>
+
+    <div class="table-responsive" style="min-height: 320px;">
+      <table class="fs-table table-align-middle">
+        <thead>
+          <tr>
+            <th>Invoice & Vehicle</th>
+            <th>Customer Information</th>
+            <th>Service Details</th>
+            <th class="text-end">Billed Amount</th>
+            <th>Invoice Date</th>
+            <th class="text-center">Payment Status</th>
+            <th>Payment Information</th>
+            <th class="text-end">Payment Settlement Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr {% if inv.payment_status != 'Paid' %}class="bg-danger bg-opacity-10"{% endif %}>
+            <!-- Invoice & Vehicle -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('service_invoice', record_id=inv.id) }}" target="_blank" class="fw-bold font-monospace text-primary text-decoration-none fs-6" title="Click to view/print customer invoice">
+                  {{ inv.invoice_number }}
+                </a>
+                {% if inv.job_status == 'Completed' %}
+                  <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-2 small">Done</span>
+                {% else %}
+                  <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 py-0 px-2 small">{{ inv.job_status }}</span>
+                {% endif %}
+              </div>
+              <div class="small mt-1">
+                <span class="badge bg-light text-dark border font-monospace">{{ inv.plate_number }}</span>
+                <span class="text-secondary ms-1">{{ inv.make }} {{ inv.model }}</span>
+              </div>
+            </td>
+
+            <!-- Customer Details -->
+            <td>
+              <strong class="text-dark d-block">
+                <a href="{{ url_for('customer_detail', customer_id=inv.customer_id) }}" class="text-dark text-decoration-none hover-primary">
+                  {{ inv.customer_name }}
+                </a>
+              </strong>
+              {% if inv.customer_phone %}
+                <a href="tel:{{ inv.customer_phone }}" class="text-success small text-decoration-none fw-semibold d-block">
+                  <i class="fa-solid fa-phone me-1"></i>{{ inv.customer_phone }}
+                </a>
+              {% endif %}
+              {% if inv.company_name %}
+                <small class="text-muted d-block" style="font-size: 0.72rem;"><i class="fa-solid fa-building me-1"></i>{{ inv.company_name }}</small>
+              {% endif %}
+            </td>
+
+            <!-- Service Details -->
+            <td>
+              <strong class="text-dark small d-block">{{ inv.service_type }}</strong>
+              {% if inv.technician_name %}
+                <small class="text-secondary d-block"><i class="fa-solid fa-wrench me-1 text-muted"></i>Tech: {{ inv.technician_name }}</small>
+              {% endif %}
+            </td>
+
+            <!-- Billed Amount -->
+            <td class="text-end">
+              <div class="fw-bold fs-6 text-primary">{{ inv.total_cost | currency }}</div>
+              <small class="text-muted d-block font-monospace" style="font-size: 0.7rem;">
+                Parts: {{ inv.parts_cost | currency }} | Labor: {{ inv.labor_cost | currency }}
+              </small>
+            </td>
+
+            <!-- Invoice Date & Due Date -->
+            <td>
+              <div class="small fw-semibold text-dark">
+                {{ inv.service_date | format_date if inv.service_date else inv.created_at | format_date }}
+              </div>
+              <small class="text-muted d-block" style="font-size: 0.72rem;">Due: {{ inv.due_date | format_date }}</small>
+            </td>
+
+            <!-- Interactive Payment Status Dropdown -->
+            <td class="text-center">
+              <div class="dropdown d-inline-block">
+                <button class="btn btn-sm dropdown-toggle rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs border {% if inv.payment_status == 'Paid' %}btn-outline-success bg-success bg-opacity-10 text-success border-success border-opacity-25{% elif inv.payment_status == 'Partially Paid' %}btn-outline-warning bg-warning bg-opacity-10 text-warning border-warning border-opacity-25{% else %}btn-outline-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-25{% endif %}"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Click to change payment status">
+                  {% if inv.payment_status == 'Paid' %}
+                    <i class="fa-solid fa-circle-check text-success me-1"></i> Paid
+                  {% elif inv.payment_status == 'Partially Paid' %}
+                    <i class="fa-solid fa-clock text-warning me-1"></i> Partial
+                  {% else %}
+                    <i class="fa-solid fa-circle-exclamation text-danger me-1"></i> Unpaid
+                  {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-center shadow border-0 rounded-3 p-2" style="min-width: 220px;">
+                  <li class="dropdown-header small text-uppercase fw-bold text-muted px-2 py-1">Set Payment Status</li>
+                  <!-- Submit Cash Payment -->
+                  <li>
+                    <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="action" value="submit_payment">
+                      <input type="hidden" name="payment_status" value="Paid">
+                      <input type="hidden" name="payment_method" value="Cash">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if inv.payment_status == 'Paid' and inv.payment_method == 'Cash' %}active bg-success text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-money-bill-1-wave text-success me-2 {% if inv.payment_status == 'Paid' and inv.payment_method == 'Cash' %}text-white{% endif %}"></i> Mark Paid (Cash)</span>
+                        {% if inv.payment_status == 'Paid' and inv.payment_method == 'Cash' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <!-- Submit UPI Payment -->
+                  <li>
+                    <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="action" value="submit_payment">
+                      <input type="hidden" name="payment_status" value="Paid">
+                      <input type="hidden" name="payment_method" value="UPI / QR">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if inv.payment_status == 'Paid' and inv.payment_method == 'UPI / QR' %}active bg-success text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-qrcode text-primary me-2 {% if inv.payment_status == 'Paid' and inv.payment_method == 'UPI / QR' %}text-white{% endif %}"></i> Mark Paid (UPI / QR)</span>
+                        {% if inv.payment_status == 'Paid' and inv.payment_method == 'UPI / QR' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <!-- Submit Card Payment -->
+                  <li>
+                    <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST" class="m-0">
+                      <input type="hidden" name="action" value="submit_payment">
+                      <input type="hidden" name="payment_status" value="Paid">
+                      <input type="hidden" name="payment_method" value="Credit/Debit Card">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small {% if inv.payment_status == 'Paid' and inv.payment_method == 'Credit/Debit Card' %}active bg-success text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-credit-card text-info me-2 {% if inv.payment_status == 'Paid' and inv.payment_method == 'Credit/Debit Card' %}text-white{% endif %}"></i> Mark Paid (Card)</span>
+                        {% if inv.payment_status == 'Paid' and inv.payment_method == 'Credit/Debit Card' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li><hr class="dropdown-divider my-1"></li>
+                  <!-- Revert / Mark as Unpaid -->
+                  <li>
+                    <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST" class="m-0" onsubmit="return confirm('Revert Invoice {{ inv.invoice_number }} to Unpaid?');">
+                      <input type="hidden" name="action" value="mark_unpaid">
+                      <button type="submit" class="dropdown-item rounded-2 py-2 px-2 d-flex align-items-center justify-content-between small text-danger {% if inv.payment_status == 'Unpaid' %}active bg-danger text-white fw-bold{% endif %}">
+                        <span><i class="fa-solid fa-rotate-left me-2 {% if inv.payment_status == 'Unpaid' %}text-white{% endif %}"></i> Mark as Unpaid</span>
+                        {% if inv.payment_status == 'Unpaid' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                      </button>
+                    </form>
+                  </li>
+                  <li><hr class="dropdown-divider my-1"></li>
+                  <li>
+                    <button type="button" class="dropdown-item rounded-2 py-2 px-2 text-primary small" data-bs-toggle="modal" data-bs-target="#payModal{{ inv.id }}">
+                      <i class="fa-solid fa-file-pen me-2"></i> Detailed Payment Form...
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </td>
+
+            <!-- Payment Details (Method, Date, Notes) -->
+            <td>
+              {% if inv.payment_status == 'Paid' %}
+                <div class="small fw-semibold text-success">
+                  <i class="fa-solid fa-wallet me-1"></i> {{ inv.payment_method or 'Cash Settlement' }}
+                </div>
+                {% if inv.payment_date %}
+                  <small class="text-muted d-block" style="font-size: 0.72rem;">
+                    {{ inv.payment_date | format_date }}
+                  </small>
+                {% endif %}
+                {% if inv.payment_notes %}
+                  <small class="text-secondary d-block text-truncate" style="max-width: 160px;" title="{{ inv.payment_notes }}">
+                    <i class="fa-regular fa-note-sticky me-1"></i>{{ inv.payment_notes }}
+                  </small>
+                {% endif %}
+              {% elif inv.payment_status == 'Partially Paid' %}
+                <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-50 small">
+                  Partial Payment Recorded
+                </span>
+              {% else %}
+                <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 small">
+                  <i class="fa-solid fa-clock me-1"></i> Awaiting Payment
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Actions -->
+            <td class="text-end text-nowrap">
+              <div class="d-inline-flex gap-1 align-items-center">
+                {% if inv.payment_status != 'Paid' %}
+                  <!-- Easy Submit Payment Button -->
+                  <button type="button" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs" 
+                          data-bs-toggle="modal" data-bs-target="#payModal{{ inv.id }}" title="Submit payment for this invoice">
+                    <i class="fa-solid fa-check me-1"></i> Submit Payment
+                  </button>
+                {% else %}
+                  <!-- Easy Mark Unpaid Button -->
+                  <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Revert invoice {{ inv.invoice_number }} back to Unpaid?');">
+                    <input type="hidden" name="action" value="mark_unpaid">
+                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-xs" title="Revert this invoice back to Unpaid">
+                      <i class="fa-solid fa-rotate-left me-1"></i> Mark Unpaid
+                    </button>
+                  </form>
+                {% endif %}
+
+                <!-- View & Print Tax Invoice -->
+                <a href="{{ url_for('service_invoice', record_id=inv.id) }}" target="_blank" class="btn btn-sm btn-light border rounded-pill px-2" title="Print Customer Tax Invoice">
+                  <i class="fa-solid fa-print"></i>
+                </a>
+
+                <!-- View Service Detail -->
+                <a href="{{ url_for('service_detail', record_id=inv.id) }}" class="btn btn-sm btn-light border rounded-pill px-2" title="View Work Order Details">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-secondary">
+              <div class="py-4">
+                <i class="fa-solid fa-file-invoice fa-3x text-muted mb-3 opacity-50 d-block"></i>
+                <h5 class="fw-bold text-dark">No Current Invoices Found</h5>
+                <p class="text-secondary small mb-3">No invoice records match your current search or status filter criteria.</p>
+                <a href="{{ url_for('admin_invoice_payments') }}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm">
+                  <i class="fa-solid fa-rotate-left me-1"></i> Reset Filters & View All Invoices
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Table Footer Summary -->
+    {% if invoices %}
+    <div class="card-footer bg-transparent border-top py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 text-secondary small">
+      <div>
+        Showing <strong>{{ invoices|length }}</strong> current invoice record(s)
+      </div>
+      <div>
+        Total Invoiced Value: <strong class="text-primary">{{ total_billed | currency }}</strong> | 
+        Settled: <strong class="text-success">{{ total_paid | currency }}</strong> | 
+        Outstanding Due: <strong class="text-danger">{{ total_unpaid | currency }}</strong>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Detailed Payment Submission Modals (outside table-responsive to prevent clipping) -->
+  {% for inv in invoices %}
+  <div class="modal fade text-start" id="payModal{{ inv.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <form action="{{ url_for('admin_invoice_submit_payment', record_id=inv.id) }}" method="POST">
+          <input type="hidden" name="action" value="submit_payment">
+          
+          <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+            <div>
+              <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-2 py-1 small">
+                <i class="fa-solid fa-receipt me-1"></i> Payment Settlement
+              </span>
+              <h5 class="modal-title fw-bold text-dark mt-1">Submit Payment: {{ inv.invoice_number }}</h5>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body p-4">
+            <!-- Customer & Vehicle Info Summary Box -->
+            <div class="p-3 bg-light rounded-3 mb-3 border">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-secondary small">Customer:</span>
+                <strong class="text-dark">{{ inv.customer_name }}</strong>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-secondary small">Vehicle Plate:</span>
+                <span class="font-monospace fw-bold text-dark">{{ inv.plate_number }} ({{ inv.make }} {{ inv.model }})</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <span class="text-secondary small fw-bold">Total Bill Due:</span>
+                <span class="fs-5 fw-bold text-primary">{{ inv.total_cost | currency }}</span>
+              </div>
+            </div>
+
+            <!-- Payment Status Target -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">Set Payment State <span class="text-danger">*</span></label>
+              <select name="payment_status" class="form-select fw-semibold" required>
+                <option value="Paid" selected>🟢 Paid in Full (Settled)</option>
+                <option value="Partially Paid">🟡 Partially Paid</option>
+              </select>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">Payment Method / Channel <span class="text-danger">*</span></label>
+              <select name="payment_method" class="form-select fw-semibold" required>
+                <option value="Cash" {% if inv.payment_method == 'Cash' or not inv.payment_method %}selected{% endif %}>💵 Cash Payment</option>
+                <option value="UPI / QR" {% if inv.payment_method == 'UPI / QR' %}selected{% endif %}>📱 UPI / QR Code (GPay, PhonePe, Paytm)</option>
+                <option value="Credit/Debit Card" {% if inv.payment_method == 'Credit/Debit Card' %}selected{% endif %}>💳 Credit / Debit Card POS</option>
+                <option value="Bank Transfer (NEFT/RTGS/IMPS)" {% if inv.payment_method == 'Bank Transfer (NEFT/RTGS/IMPS)' %}selected{% endif %}>🏦 Bank Transfer (NEFT / RTGS / IMPS)</option>
+                <option value="Cheque / Draft" {% if inv.payment_method == 'Cheque / Draft' %}selected{% endif %}>📜 Cheque / Bank Draft</option>
+              </select>
+            </div>
+
+            <!-- Payment Date -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">Settlement Date</label>
+              <input type="datetime-local" name="payment_date" class="form-control" 
+                     value="{{ inv.payment_date.strftime('%Y-%m-%dT%H:%M') if inv.payment_date else now.strftime('%Y-%m-%dT%H:%M') }}">
+              <small class="text-muted" style="font-size: 0.72rem;">Defaults to current date and time</small>
+            </div>
+
+            <!-- Reference Notes -->
+            <div class="mb-2">
+              <label class="form-label small fw-semibold text-secondary">Transaction Reference # / Counter Notes (Optional)</label>
+              <input type="text" name="payment_notes" class="form-control" 
+                     placeholder="e.g. UTR / UPI Ref: 418293710, Cash receipt voucher #104" value="{{ inv.payment_notes or '' }}">
+            </div>
+          </div>
+
+          <div class="modal-footer border-0 pt-0 px-4 pb-4">
+            <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
+              <i class="fa-solid fa-check me-1"></i> Confirm & Record Payment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}
+

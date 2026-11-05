@@ -103,79 +103,8 @@
   </div>
 
   <div class="row g-4">
-    <!-- Left Column: Maintenance Schedules & Intervals -->
+    <!-- Left Column: Service History & Work Orders -->
     <div class="col-lg-7" data-aos="fade-up" data-aos-delay="100">
-      <div class="card fs-card mb-4">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="fw-bold text-dark m-0">Preventive Maintenance Schedules</h5>
-            <small class="text-secondary">Automated interval tracking based on time & odometer</small>
-          </div>
-          <a href="{{ url_for('schedule_create') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-            <i class="fa-solid fa-plus me-1"></i> Add Rule
-          </a>
-        </div>
-
-        <div class="table-responsive">
-          <table class="fs-table">
-            <thead>
-              <tr>
-                <th>Service Name</th>
-                <th>Interval</th>
-                <th>Due Target</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for s in schedules %}
-              <tr>
-                <td class="fw-semibold text-dark">
-                  {{ s.service_name }}
-                  {% if s.description %}
-                    <small class="text-secondary d-block text-truncate" style="max-width: 200px;">{{ s.description }}</small>
-                  {% endif %}
-                </td>
-                <td class="small text-secondary">
-                  Every {{ s.interval_km | format_km }} / {{ s.interval_months }} mos
-                </td>
-                <td>
-                  <div class="fw-bold {% if s.status == 'Overdue' %}text-danger{% elif s.status == 'Due Soon' %}text-warning{% else %}text-dark{% endif %}">
-                    {{ s.next_due_date | format_date }}
-                  </div>
-                  <small class="text-secondary">At {{ s.next_due_odometer | format_km }}</small>
-                </td>
-                <td>
-                  <span class="fs-badge badge-priority-{{ s.priority.lower() }}">{{ s.priority }}</span>
-                </td>
-                <td>
-                  {% if s.status == 'Overdue' %}
-                    <span class="fs-badge badge-overdue"><span class="badge-dot"></span>Overdue</span>
-                  {% elif s.status == 'Due Soon' %}
-                    <span class="fs-badge badge-duesoon"><span class="badge-dot"></span>Due Soon</span>
-                  {% else %}
-                    <span class="fs-badge badge-active"><span class="badge-dot"></span>Upcoming</span>
-                  {% endif %}
-                </td>
-                <td class="text-end">
-                  <a href="{{ url_for('service_create', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Service Now">
-                    <i class="fa-solid fa-wrench"></i>
-                  </a>
-                </td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="6" class="text-center py-4 text-secondary">
-                  No maintenance schedules configured yet. Click "Add Rule" to configure OEM intervals.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- Service History Timeline -->
       <div class="card fs-card">
         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">

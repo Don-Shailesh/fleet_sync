@@ -104,6 +104,15 @@ def inject_global_vars():
     except Exception:
         pass
 
+    # Count of unpaid / pending invoices for navbar badge
+    unpaid_invoices_count = 0
+    try:
+        unpaid_res = query_db("SELECT COUNT(*) as cnt FROM service_records WHERE payment_status != 'Paid' AND total_cost > 0", one=True)
+        if unpaid_res:
+            unpaid_invoices_count = unpaid_res['cnt']
+    except Exception:
+        unpaid_invoices_count = 0
+
     return {
         'app_name': Config.APP_NAME,
         'app_tagline': Config.APP_TAGLINE,
@@ -115,6 +124,7 @@ def inject_global_vars():
         'unread_available_parts_count': unread_available_parts_count,
         'pending_parts_requests_count': pending_parts_requests_count,
         'low_stock_parts_count': low_stock_parts_count,
+        'unpaid_invoices_count': unpaid_invoices_count,
         'current_year': datetime.now().year,
         'now': datetime.now()
     }
@@ -1095,7 +1105,8 @@ def service_create():
 
     if request.method == 'POST':
         vehicle_id = request.form.get('vehicle_id')
-        user_id = request.form.get('user_id') or session.get('user_id')
+        raw_user_id = request.form.get('user_id')
+        user_id = int(raw_user_id) if raw_user_id and raw_user_id.strip() else None
         service_date = request.form.get('service_date', date.today().isoformat())
         appointment_date = request.form.get('appointment_date') or service_date
         appointment_time = request.form.get('appointment_time') or '10:00:00'
@@ -1192,7 +1203,25 @@ def service_create():
             flash(f"Error creating work order: {str(e)}", "danger")
 
     vehicles = query_db("SELECT id, plate_number, make, model, current_odometer FROM vehicles ORDER BY plate_number")
-    technicians = query_db("SELECT id, name, role, availability_status, specialization, skills FROM users WHERE role IN ('Technician', 'Service Advisor', 'Admin') AND status = 'Active' ORDER BY name")
+    preset_tech_id = request.args.get('tech_id', type=int)
+    if preset_tech_id:
+        technicians = query_db("""
+            SELECT id, name, role, availability_status, specialization, skills 
+            FROM users 
+            WHERE role = 'Technician' 
+              AND status = 'Active' 
+              AND (availability_status = 'Available' OR id = %s) 
+            ORDER BY name
+        """, (preset_tech_id,))
+    else:
+        technicians = query_db("""
+            SELECT id, name, role, availability_status, specialization, skills 
+            FROM users 
+            WHERE role = 'Technician' 
+              AND status = 'Active' 
+              AND availability_status = 'Available' 
+            ORDER BY name
+        """)
     preset_vehicle_id = request.args.get('vehicle_id', type=int)
 
     return render_template(
@@ -1315,7 +1344,8 @@ def service_edit(record_id):
         return redirect(url_for('services_list'))
 
     if request.method == 'POST':
-        user_id = request.form.get('user_id')
+        raw_user_id = request.form.get('user_id')
+        user_id = int(raw_user_id) if raw_user_id and raw_user_id.strip() else None
         service_date = request.form.get('service_date')
         appointment_date = request.form.get('appointment_date') or service['appointment_date'] or service_date
         appointment_time = request.form.get('appointment_time') or service['appointment_time'] or '10:00:00'
@@ -1423,7 +1453,15 @@ def service_edit(record_id):
             flash(f"Failed to update work order: {str(e)}", "danger")
 
     vehicles = query_db("SELECT id, plate_number, make, model FROM vehicles")
-    technicians = query_db("SELECT id, name, role, availability_status, specialization, skills FROM users WHERE role IN ('Technician', 'Service Advisor', 'Admin') AND status = 'Active' ORDER BY name")
+    curr_tech_id = service['user_id'] if (service and service['user_id']) else 0
+    technicians = query_db("""
+        SELECT id, name, role, availability_status, specialization, skills 
+        FROM users 
+        WHERE role = 'Technician' 
+          AND status = 'Active' 
+          AND (availability_status = 'Available' OR id = %s) 
+        ORDER BY name
+    """, (curr_tech_id,))
     items = query_db("SELECT * FROM service_items WHERE service_record_id = %s", (record_id,))
 
     return render_template(
@@ -2164,6 +2202,153 @@ def export_invoice_report_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment;filename={filename}"}
     )
+
+# =============================================================
+# Admin Invoice Payments & Settlement Center ("Invoice Paid")
+# =============================================================
+
+@app.route('/admin/invoices/payments')
+@app.route('/admin/invoice-paid')
+@login_required
+@admin_required
+def admin_invoice_payments():
+    """
+    Invoice Paid & Payment Management Center for Administrators.
+    Provides current/latest invoice registry, 1-click submit payment, and mark invoices as Paid or Unpaid.
+    """
+    search = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', 'All').strip()
+    date_filter = request.args.get('date_filter', 'All').strip()
+
+    sql = """
+        SELECT sr.id, sr.invoice_number, sr.service_date, sr.service_type, sr.status as job_status,
+               sr.parts_cost, sr.labor_cost, sr.tax_amount, sr.discount_amount, sr.total_cost,
+               sr.payment_status, sr.payment_method, sr.payment_date, sr.payment_notes,
+               sr.bill_status, sr.bill_generated_at, sr.created_at, sr.completed_at,
+               DATE_ADD(COALESCE(sr.service_date, DATE(sr.created_at)), INTERVAL 30 DAY) as due_date,
+               v.plate_number, v.make, v.model,
+               c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
+               c.email as customer_email, c.company_name,
+               u.name as technician_name
+        FROM service_records sr
+        JOIN vehicles v ON sr.vehicle_id = v.id
+        JOIN customers c ON v.customer_id = c.id
+        LEFT JOIN users u ON sr.user_id = u.id
+        WHERE 1=1
+    """
+    params = []
+
+    if search:
+        sql += """ AND (
+            sr.invoice_number LIKE %s OR 
+            c.name LIKE %s OR 
+            c.company_name LIKE %s OR 
+            c.phone LIKE %s OR 
+            v.plate_number LIKE %s OR 
+            v.make LIKE %s OR 
+            v.model LIKE %s
+        )"""
+        term = f"%{search}%"
+        params.extend([term, term, term, term, term, term, term])
+
+    if status_filter and status_filter != 'All':
+        sql += " AND sr.payment_status = %s"
+        params.append(status_filter)
+
+    if date_filter == 'Today':
+        sql += " AND DATE(COALESCE(sr.service_date, sr.created_at)) = CURDATE()"
+    elif date_filter == 'This Month':
+        sql += " AND YEAR(COALESCE(sr.service_date, sr.created_at)) = YEAR(CURDATE()) AND MONTH(COALESCE(sr.service_date, sr.created_at)) = MONTH(CURDATE())"
+
+    # Always sort by newest / current invoice first
+    sql += " ORDER BY sr.id DESC"
+
+    invoices = query_db(sql, tuple(params)) or []
+
+    # Calculate metrics across all current invoices
+    total_invoices = query_db("SELECT COUNT(*) as cnt FROM service_records", one=True)['cnt'] or 0
+    paid_count = query_db("SELECT COUNT(*) as cnt FROM service_records WHERE payment_status = 'Paid'", one=True)['cnt'] or 0
+    unpaid_count = query_db("SELECT COUNT(*) as cnt FROM service_records WHERE payment_status != 'Paid'", one=True)['cnt'] or 0
+
+    total_billed = query_db("SELECT COALESCE(SUM(total_cost), 0) as total FROM service_records", one=True)['total'] or 0.0
+    total_paid = query_db("SELECT COALESCE(SUM(total_cost), 0) as total FROM service_records WHERE payment_status = 'Paid'", one=True)['total'] or 0.0
+    total_unpaid = query_db("SELECT COALESCE(SUM(total_cost), 0) as total FROM service_records WHERE payment_status != 'Paid'", one=True)['total'] or 0.0
+
+    return render_template(
+        'admin/invoices/payments.html',
+        invoices=invoices,
+        search=search,
+        status_filter=status_filter,
+        date_filter=date_filter,
+        total_invoices=total_invoices,
+        paid_count=paid_count,
+        unpaid_count=unpaid_count,
+        total_billed=float(total_billed),
+        total_paid=float(total_paid),
+        total_unpaid=float(total_unpaid)
+    )
+
+@app.route('/admin/invoices/<int:record_id>/payment', methods=['POST'])
+@login_required
+@admin_required
+def admin_invoice_submit_payment(record_id):
+    """
+    Allows Admin to submit payment for an invoice (marking it Paid with method & notes)
+    or revert an invoice back to Unpaid.
+    """
+    invoice = query_db("""
+        SELECT sr.*, c.name as customer_name, v.plate_number
+        FROM service_records sr
+        JOIN vehicles v ON sr.vehicle_id = v.id
+        JOIN customers c ON v.customer_id = c.id
+        WHERE sr.id = %s
+    """, (record_id,), one=True)
+
+    if not invoice:
+        flash("Invoice / Service Record not found.", "danger")
+        return redirect(url_for('admin_invoice_payments'))
+
+    action = request.form.get('action', 'submit_payment').strip()
+    payment_status = request.form.get('payment_status', '').strip()
+
+    if action == 'mark_unpaid' or payment_status == 'Unpaid':
+        try:
+            query_db("""
+                UPDATE service_records
+                SET payment_status = 'Unpaid',
+                    payment_method = NULL,
+                    payment_date = NULL,
+                    payment_notes = CONCAT(COALESCE(payment_notes, ''), ' [Reverted to Unpaid by Admin on ', NOW(), ']')
+                WHERE id = %s
+            """, (record_id,), commit=True)
+            flash(f"Invoice '{invoice['invoice_number']}' has been marked as Unpaid successfully.", "warning")
+        except Exception as e:
+            flash(f"Failed to update payment status: {str(e)}", "danger")
+
+    else:
+        # Submit / Record payment
+        payment_method = request.form.get('payment_method', 'Cash').strip()
+        custom_date = request.form.get('payment_date', '').strip()
+        payment_notes = request.form.get('payment_notes', '').strip()
+        new_status = 'Paid' if payment_status in ('', 'Paid') else payment_status
+
+        pay_date = custom_date if custom_date else datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        try:
+            query_db("""
+                UPDATE service_records
+                SET payment_status = %s,
+                    payment_method = %s,
+                    payment_date = %s,
+                    payment_notes = %s
+                WHERE id = %s
+            """, (new_status, payment_method, pay_date, payment_notes or None, record_id), commit=True)
+
+            flash(f"Payment for Invoice '{invoice['invoice_number']}' (₹{float(invoice['total_cost'] or 0):,.2f}) submitted successfully! Marked as '{new_status}' via {payment_method}.", "success")
+        except Exception as e:
+            flash(f"Failed to submit payment: {str(e)}", "danger")
+
+    return redirect(request.referrer or url_for('admin_invoice_payments'))
 
 # -------------------------------------------------------------
 # Spare Parts Department & Inventory Management

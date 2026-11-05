@@ -166,9 +166,45 @@
             {% endif %}
 
             <div class="mt-2">
-              <span class="badge {% if service.payment_status == 'Paid' %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">
-                {{ service.payment_status }}
-              </span>
+              {% if current_user.role == 'Admin' %}
+                <div class="dropdown d-inline-block">
+                  <button class="btn btn-sm dropdown-toggle rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs border {% if service.payment_status == 'Paid' %}btn-outline-success bg-success bg-opacity-10 text-success border-success border-opacity-25{% else %}btn-outline-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-25{% endif %}"
+                          type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Click to toggle or submit payment">
+                    {% if service.payment_status == 'Paid' %}
+                      <i class="fa-solid fa-circle-check text-success me-1"></i> Paid
+                    {% else %}
+                      <i class="fa-solid fa-circle-exclamation text-danger me-1"></i> Unpaid
+                    {% endif %}
+                  </button>
+                  <ul class="dropdown-menu shadow border-0 rounded-3 p-2" style="min-width: 190px;">
+                    <li class="dropdown-header small text-uppercase fw-bold text-muted px-2 py-1">Set Payment Status</li>
+                    <li>
+                      <form action="{{ url_for('admin_invoice_submit_payment', record_id=service.id) }}" method="POST" class="m-0">
+                        <input type="hidden" name="action" value="submit_payment">
+                        <input type="hidden" name="payment_status" value="Paid">
+                        <input type="hidden" name="payment_method" value="Cash">
+                        <button type="submit" class="dropdown-item rounded-2 py-1 px-2 d-flex align-items-center justify-content-between small {% if service.payment_status == 'Paid' %}active bg-success text-white fw-bold{% endif %}">
+                          <span><i class="fa-solid fa-circle-check text-success me-2 {% if service.payment_status == 'Paid' %}text-white{% endif %}"></i> Mark as Paid</span>
+                          {% if service.payment_status == 'Paid' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                        </button>
+                      </form>
+                    </li>
+                    <li>
+                      <form action="{{ url_for('admin_invoice_submit_payment', record_id=service.id) }}" method="POST" class="m-0">
+                        <input type="hidden" name="action" value="mark_unpaid">
+                        <button type="submit" class="dropdown-item rounded-2 py-1 px-2 d-flex align-items-center justify-content-between small text-danger {% if service.payment_status == 'Unpaid' %}active bg-danger text-white fw-bold{% endif %}">
+                          <span><i class="fa-solid fa-rotate-left me-2 {% if service.payment_status == 'Unpaid' %}text-white{% endif %}"></i> Mark as Unpaid</span>
+                          {% if service.payment_status == 'Unpaid' %}<i class="fa-solid fa-check ms-2"></i>{% endif %}
+                        </button>
+                      </form>
+                    </li>
+                  </ul>
+                </div>
+              {% else %}
+                <span class="badge {% if service.payment_status == 'Paid' %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">
+                  {{ service.payment_status }}
+                </span>
+              {% endif %}
             </div>
           </div>
         </div>
